@@ -30,6 +30,18 @@ export class AuthService {
     localStorage.removeItem('access_token');
   }  
   
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post(`${this.API_URL}/forgot-password`, { email });
+  }
+
+  resendEmailVerification(email: string): Observable<any> {
+    return this.http.post(`${this.API_URL}/resend-verification`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<any> {
+    return this.http.post(`${this.API_URL}/reset-password`, { token, newPassword });
+  }
+
   private getToken(): string | null {
     return localStorage.getItem('access_token');
   }
