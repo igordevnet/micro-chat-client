@@ -1,59 +1,45 @@
-# MicroChatClient
+# 💬 Micro Chat Client
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.10.
+An elegant, real-time chat application frontend built with **Angular** and styled with a modern **Glassmorphism** aesthetic. This project serves as the presentation layer for a robust, distributed microservices backend.
 
-## Development server
+## 🚀 Tech Stack
 
-To start a local development server, run:
+*   **Framework:** Angular (TypeScript)
+*   **Styling:** SCSS with CSS Variables & Glassmorphism UI
+*   **State Management & Reactivity:** RxJS
+*   **Real-time Communication:** WebSockets (STOMP protocol)
+*   **Security:** JWT Authentication handling
 
-```bash
-ng serve
-```
+## 🏗️ Backend Architecture
+This client connects to a scalable backend ecosystem featuring:
+*   **Spring Cloud Gateway** for API routing.
+*   **Spring Boot Microservices** (User, Messaging, Notification).
+*   **RabbitMQ** for message brokering.
+*   **Redis** for fast token validation and caching.
+*   **PostgreSQL & MongoDB** for relational and document data storage.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 🛠️ Getting Started
 
-## Code scaffolding
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/your-username/micro-chat-client.git](https://github.com/your-username/micro-chat-client.git)
+   ```
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+2. Install dependencies:
+    ```Bash
 
-```bash
-ng generate component component-name
-```
+    cd micro-chat-client
+    npm install
+    ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+3. Run the development server:
+    ```Bash
 
-```bash
-ng generate --help
-```
+    ng serve
 
-## Building
+    ```
 
-To build the project run:
+4. Navigate to `http://localhost:4200/`.
 
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+---
+*Developed as part of a distributed systems and modern UI architecture study.*
