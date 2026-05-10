@@ -7,25 +7,30 @@ import { environment } from '../../../environments/environment.development';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = environment.apiUrl; 
+  private readonly API_URL = environment.apiUrl + '/auth'; 
 
   constructor(private http: HttpClient) {}
 
   login(credentials: any): Observable<any> {
-    return this.http.post(`${this.API_URL}/auth/local/signin`, credentials).pipe(
+    return this.http.post(`${this.API_URL}/local/signin`, credentials).pipe(
       tap((response: any) => {
-        if (response.token) {
-          localStorage.setItem('access_token', response.token);
+        if (response.accessToken) {
+          localStorage.setItem('access_token', response.accessToken);
         }
       })
     );
   }
 
-  getToken(): string | null {
-    return localStorage.getItem('access_token');
+  register(userData: any): Observable<any> {
+    return this.http.post(`${this.API_URL}/register`, userData);
   }
 
   logout(): void {
+    this.http.post(`${this.API_URL}/logout`, {});
     localStorage.removeItem('access_token');
+  }  
+  
+  private getToken(): string | null {
+    return localStorage.getItem('access_token');
   }
 }

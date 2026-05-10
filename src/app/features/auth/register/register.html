@@ -1,0 +1,94 @@
+<div class="auth-container">
+  <div class="glass-panel login-card">
+    
+    <div class="card-header">
+      <h2>Criar Conta</h2>
+      <p>Junte-se ao Micro Chat</p>
+    </div>
+    
+    <form class="login-form" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      
+      <div class="input-group">
+        <label for="username">Usuário</label>
+        <input 
+          type="text" 
+          id="username" 
+          formControlName="username"
+          class="glass-input" 
+          placeholder="Escolha um nome de usuário" 
+        />
+        <small class="error-text" *ngIf="registerForm.get('username')?.touched && registerForm.get('username')?.hasError('required')">
+          Usuário é obrigatório.
+        </small>
+      </div>
+
+      <div class="input-group">
+        <label for="email">E-mail</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email"
+          class="glass-input" 
+          placeholder="Digite seu melhor e-mail" 
+        />
+        <small class="error-text" *ngIf="registerForm.get('email')?.touched && registerForm.get('email')?.hasError('email')">
+          E-mail inválido.
+        </small>
+      </div>
+
+      <div class="input-group">
+        <label for="age">Idade</label>
+        <input 
+          type="number" 
+          id="age" 
+          formControlName="age"
+          class="glass-input" 
+          placeholder="Sua idade" 
+        />
+        <small class="error-text" *ngIf="registerForm.get('age')?.touched && registerForm.get('age')?.hasError('required')">
+          A idade é obrigatória.
+        </small>
+        <small class="error-text" *ngIf="registerForm.get('age')?.touched && registerForm.get('age')?.hasError('min')">
+          Você precisa ter pelo menos 18 anos.
+        </small>
+      </div>
+      
+      <div class="input-group">
+        <label for="password">Senha</label>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password"
+          class="glass-input" 
+          placeholder="Crie uma senha forte" 
+        />
+        <small class="error-text" *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.hasError('minlength')">
+          A senha deve ter no mínimo 6 caracteres.
+        </small>
+      </div>
+
+      <div class="input-group">
+        <label for="confirmPassword">Confirmar Senha</label>
+        <input 
+          type="password" 
+          id="confirmPassword" 
+          formControlName="confirmPassword"
+          class="glass-input" 
+          placeholder="Repita sua senha" 
+        />
+        <small class="error-text" *ngIf="registerForm.get('confirmPassword')?.touched && registerForm.hasError('mismatch')">
+          As senhas não coincidem.
+        </small>
+      </div>
+      
+      <button type="submit" class="glass-btn primary-btn">Registrar</button>
+
+      <div class="auth-links" style="text-align: center; margin-top: 15px;">
+        <a routerLink="/login" style="color: #ccc; text-decoration: none; font-size: 0.9rem;">
+          Já tem uma conta? Faça login
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
