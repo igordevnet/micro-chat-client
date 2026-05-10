@@ -1,0 +1,37 @@
+<div class="auth-container">
+  <div class="glass-panel login-card">
+    
+    <div class="card-header">
+      <h2>Bem-vindo de volta</h2>
+      <p>Conecte-se ao Micro Chat</p>
+    </div>
+    
+    <form class="login-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      
+      <div class="input-group">
+        <label for="username">Usuário</label>
+        <input 
+          type="text" 
+          id="username" 
+          formControlName="username"
+          class="glass-input" 
+          placeholder="Digite seu usuário" 
+        />
+      </div>
+      
+      <div class="input-group">
+        <label for="password">Senha</label>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password"
+          class="glass-input" 
+          placeholder="Digite sua senha" 
+        />
+      </div>
+      
+      <button type="submit" class="glass-btn primary-btn">Entrar</button>
+    </form>
+    
+  </div>
+</div>
