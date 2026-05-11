@@ -1,0 +1,64 @@
+<div class="login-container">
+  <div class="login-card">
+
+    @if (!isSuccess) {
+    <div class="login-header">
+      <h2>Verify Identity</h2>
+      <p>Code sent to <span style="color: #06b6d4;">{{ email }}</span></p>
+    </div>
+
+    <div class="code-inputs-wrapper">
+      <div class="code-inputs" [class.shake-error]="isError">
+        @for (slot of codeSlots; track $index) {
+          <input 
+            type="text" 
+            maxlength="1" 
+            placeholder="_" 
+            class="code-slot" 
+            [(ngModel)]="codeSlots[$index]"
+            (input)="onInput($event, $index)" 
+            (keydown)="onKeyDown($event, $index)">
+        }
+      </div>
+      
+      @if (getFieldError('code')) {
+        <span class="error-message show">
+          {{ getFieldError('code') }}
+        </span>
+      }
+    </div>
+
+    <button class="btn" [class.loading]="isLoading" (click)="onVerify()">
+      <span class="btn-text">Unlock Account</span>
+      <div class="btn-loader"></div>
+    </button>
+
+    <div style="text-align: center; margin-top: 24px;">
+      @if (secondsRemaining() > 0) {
+        <p style="color: rgba(255,255,255,0.6); font-size: 14px;">
+          New code in <span style="color: #06b6d4;">{{ secondsRemaining() }}s</span>
+        </p>
+      } @else {
+        <a (click)="resendCode()" class="resend-link" style="cursor: pointer;">Resend Code</a>
+      }
+    </div>
+    }
+
+    <div class="success-message" [class.show]="isSuccess">
+      <div class="success-icon">✓</div>
+      <h3>Access Granted</h3>
+      <p>Your code has been verified.<br>Welcome back to the Chat Platform.</p>
+    </div>
+
+    @if (!isSuccess) {
+    <div class="divider">
+      <span>Chat Auth</span>
+    </div>
+
+    <div class="signup-link">
+      <p>Wrong email? <a routerLink="/login" style="cursor: pointer;">Go back</a></p>
+    </div>
+    }
+
+  </div>
+</div>

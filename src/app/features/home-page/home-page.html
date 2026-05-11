@@ -1,0 +1,53 @@
+<app-header></app-header>
+<div class="home-wrapper">
+  
+  <section class="hero-section">
+    <div class="badge">v1.0 Distributed Ecosystem</div>
+    <h1>Micro-Chat <br> Architecture</h1>
+    <p>A production-grade, event-driven messaging platform built with Spring Boot, CQRS, and polyglot persistence. Designed for sub-millisecond real-time communication.</p>
+    
+    <div class="cta-group">
+      <a href="https://github.com/igordevnet/micro-chat-ecosystem" target="_blank" class="btn secondary">Ver Repositório</a>
+    </div>
+  </section>
+
+  <div class="tech-bar">
+    <div class="stack-flex">
+      @for (tech of techStack; track tech.name) {
+        <div class="stack-item">
+          <div class="icon">{{ tech.icon }}</div>
+          <span>{{ tech.name }}</span>
+          <small>{{ tech.desc }}</small>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="section-title">
+    <h2>Ecosystem Domains</h2>
+    <p>The business logic is split into autonomous, scalable microservices.</p>
+  </div>
+
+  <div class="grid-container">
+    @for (service of services; track service.name) {
+      <div class="glass-card">
+        <div class="badge" style="margin-bottom: 12px;">Port: {{ service.port }}</div>
+        <h3>{{ service.name }} Service</h3>
+        <p>{{ service.task }}</p>
+      </div>
+    }
+  </div>
+
+  <section style="max-width: 800px; margin: 0 auto 100px; padding: 0 20px; text-align: center;">
+     <div class="glass-card" style="border: 1px solid rgba(99, 102, 241, 0.3);">
+        <h3>Polyglot Infrastructure</h3>
+        <p>
+          Data is routed to specialized stores: <strong>PostgreSQL</strong> for user identity, 
+          <strong>MongoDB</strong> for infinite message history, and <strong>Redis</strong> for sub-millisecond presence tracking. 
+          Everything is tied together by <strong>RabbitMQ</strong>, the central nervous system of the platform.
+        </p>
+     </div>
+  </section>
+
+</div>
+<app-footer></app-footer>
