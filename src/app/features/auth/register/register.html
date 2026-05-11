@@ -1,94 +1,108 @@
-<div class="auth-container">
-  <div class="glass-panel login-card">
-    
-    <div class="card-header">
-      <h2>Criar Conta</h2>
-      <p>Junte-se ao Micro Chat</p>
+<div class="login-container">
+    <div class="login-card">
+
+        @if (!showSuccess) {
+        <div class="login-header">
+            <div class="back-link">
+                <a class="click" routerLink="/">← Voltar</a>
+            </div>
+            <h2>Nova Conta</h2>
+            <p>Entre para nossa comunidade hoje!</p>
+        </div>
+
+        <form class="login-form" [formGroup]="signupForm" (ngSubmit)="handleSignup()" novalidate>
+
+            <div class="form-group">
+                <div class="input-wrapper" [class.focused]="activeField === 'nickname'">
+                    <input type="text" formControlName="nickname" placeholder=" " (focus)="activeField = 'nickname'"
+                        (blur)="activeField = ''" required>
+                    <label [class.has-value]="signupForm.get('nickname')?.value">Username</label>
+                    <span class="focus-border"></span>
+                </div>
+                @if (getFieldError('nickname')) {
+                <span class="error-message show">
+                    {{ getFieldError('nickname') }}
+                </span>
+                }
+            </div>
+
+            <div class="form-group">
+                <div class="input-wrapper" [class.focused]="activeField === 'email'">
+                    <input type="email" formControlName="email" placeholder=" " (focus)="activeField = 'email'"
+                        (blur)="activeField = ''" required>
+                    <label [class.has-value]="signupForm.get('email')?.value">Endereço de Email</label>
+                    <span class="focus-border"></span>
+                </div>
+                @if (getFieldError('email')) {
+                <span class="error-message show">
+                    {{ getFieldError('email') }}
+                </span>
+                }
+            </div>
+
+            <div class="form-group">
+                <div class="input-wrapper" [class.focused]="activeField === 'age'">
+                    <input type="number" formControlName="age" placeholder=" " (focus)="activeField = 'age'"
+                        (blur)="activeField = ''" required min="18" max="120">
+                    <label [class.has-value]="signupForm.get('age')?.value">Idade</label>
+                    <span class="focus-border"></span>
+                </div>
+                @if (getFieldError('age')) {
+                <span class="error-message show">
+                    {{ getFieldError('age') }}
+                </span>
+                }
+            </div>
+
+            <div class="form-group">
+                <div class="input-wrapper password-wrapper" [class.focused]="activeField === 'password'">
+                    <input [type]="passwordVisible ? 'text' : 'password'" formControlName="password" placeholder=" "
+                        (focus)="activeField = 'password'" (blur)="activeField = ''" required>
+                    <label [class.has-value]="signupForm.get('password')?.value">Senha</label>
+                    <button type="button" class="password-toggle" (click)="togglePassword()">
+                        <span class="eye-icon" [class.show-password]="passwordVisible"></span>
+                    </button>
+                    <span class="focus-border"></span>
+                </div>
+                @if (getFieldError('password')) {
+                <span class="error-message show">
+                    {{ getFieldError('password') }}
+                </span>
+                }
+            </div>
+
+            <div class="form-group">
+                <div class="input-wrapper password-wrapper" [class.focused]="activeField === 'confirmPassword'">
+                    <input [type]="passwordVisible ? 'text' : 'password'" formControlName="confirmPassword" placeholder=" "
+                        (focus)="activeField = 'confirmPassword'" (blur)="activeField = ''" required>
+                    <label [class.has-value]="signupForm.get('confirmPassword')?.value">Confirmar Senha</label>
+                    <span class="focus-border"></span>
+                </div>
+                @if (signupForm.hasError('mismatch') && signupForm.get('confirmPassword')?.touched) {
+                <span class="error-message show">As senhas não coincidem.</span>
+                }
+            </div>
+
+            <button type="submit" class="btn" [class.loading]="isSubmitting" [disabled]="isSubmitting">
+                <span class="btn-text" [style.opacity]="isSubmitting ? 0 : 1">Criar conta</span>
+                @if (isSubmitting) { <span class="btn-loader"></span> }
+            </button>
+        </form>
+
+        <div class="signup-link" style="margin-top: 24px;">
+            <p>Já possui uma conta? <a class="click" routerLink="/login">Entrar</a></p>
+        </div>
+        } @else {
+        <div class="success-message show">
+            <div class="success-icon">✓</div>
+            <h3>Bem-vindo(a)!</h3>
+            <p>Sua conta foi criada. Redirecionando...</p>
+        </div>
+        }
     </div>
-    
-    <form class="login-form" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
-      
-      <div class="input-group">
-        <label for="username">Usuário</label>
-        <input 
-          type="text" 
-          id="username" 
-          formControlName="username"
-          class="glass-input" 
-          placeholder="Escolha um nome de usuário" 
-        />
-        <small class="error-text" *ngIf="registerForm.get('username')?.touched && registerForm.get('username')?.hasError('required')">
-          Usuário é obrigatório.
-        </small>
-      </div>
-
-      <div class="input-group">
-        <label for="email">E-mail</label>
-        <input 
-          type="email" 
-          id="email" 
-          formControlName="email"
-          class="glass-input" 
-          placeholder="Digite seu melhor e-mail" 
-        />
-        <small class="error-text" *ngIf="registerForm.get('email')?.touched && registerForm.get('email')?.hasError('email')">
-          E-mail inválido.
-        </small>
-      </div>
-
-      <div class="input-group">
-        <label for="age">Idade</label>
-        <input 
-          type="number" 
-          id="age" 
-          formControlName="age"
-          class="glass-input" 
-          placeholder="Sua idade" 
-        />
-        <small class="error-text" *ngIf="registerForm.get('age')?.touched && registerForm.get('age')?.hasError('required')">
-          A idade é obrigatória.
-        </small>
-        <small class="error-text" *ngIf="registerForm.get('age')?.touched && registerForm.get('age')?.hasError('min')">
-          Você precisa ter pelo menos 18 anos.
-        </small>
-      </div>
-      
-      <div class="input-group">
-        <label for="password">Senha</label>
-        <input 
-          type="password" 
-          id="password" 
-          formControlName="password"
-          class="glass-input" 
-          placeholder="Crie uma senha forte" 
-        />
-        <small class="error-text" *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.hasError('minlength')">
-          A senha deve ter no mínimo 6 caracteres.
-        </small>
-      </div>
-
-      <div class="input-group">
-        <label for="confirmPassword">Confirmar Senha</label>
-        <input 
-          type="password" 
-          id="confirmPassword" 
-          formControlName="confirmPassword"
-          class="glass-input" 
-          placeholder="Repita sua senha" 
-        />
-        <small class="error-text" *ngIf="registerForm.get('confirmPassword')?.touched && registerForm.hasError('mismatch')">
-          As senhas não coincidem.
-        </small>
-      </div>
-      
-      <button type="submit" class="glass-btn primary-btn">Registrar</button>
-
-      <div class="auth-links" style="text-align: center; margin-top: 15px;">
-        <a routerLink="/login" style="color: #ccc; text-decoration: none; font-size: 0.9rem;">
-          Já tem uma conta? Faça login
-        </a>
-      </div>
-
-    </form>
-  </div>
 </div>
+
+@if (apiError()) {
+<app-pop-up-component [title]="'Erro ' + apiError()!.status" [message]="apiError()!.error"
+    (closed)="apiError.set(undefined)"></app-pop-up-component>
+}

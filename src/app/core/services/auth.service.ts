@@ -35,11 +35,15 @@ export class AuthService {
   }
 
   resendEmailVerification(email: string): Observable<any> {
-    return this.http.post(`${this.API_URL}/resend-verification`, { email });
+    return this.http.post(`${this.API_URL}/resend-email-code`, { email });
   }
 
   resetPassword(token: string, newPassword: string): Observable<any> {
     return this.http.post(`${this.API_URL}/reset-password`, { token, newPassword });
+  }
+
+  verifyEmail(email: string, code: string): Observable<any> {
+    return this.http.post(`${this.API_URL}/verify-email`, { email, code });
   }
 
   private getToken(): string | null {
