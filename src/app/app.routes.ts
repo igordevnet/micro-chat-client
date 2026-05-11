@@ -3,6 +3,7 @@ import { LoginComponent } from './features/auth/login/login';
 import { RegisterComponent } from './features/auth/register/register';
 
 export const routes: Routes = [
+    { path: '', loadComponent: () => import('./features/home-page/home-page').then(m => m.HomeComponent) },
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) },
