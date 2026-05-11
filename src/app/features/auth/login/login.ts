@@ -1,16 +1,18 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApiError } from '../../../shared/interfaces/error';
+import { timer } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink], 
-  templateUrl: './login.html', 
-  styleUrl: './login.scss' 
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './login.html',
+  styleUrl: './login.scss'
 })
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
@@ -20,20 +22,22 @@ export class LoginComponent implements OnInit {
   activeField = '';
   public apiError?: ApiError;
 
+  private router = inject(Router);
   private fb = inject(FormBuilder);
+  private destroyRef = inject(DestroyRef);
   private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      username: ['', [Validators.required]], 
+      username: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       remember: [false]
     });
   }
 
-  togglePassword() { 
-    this.passwordVisible = !this.passwordVisible; 
+  togglePassword() {
+    this.passwordVisible = !this.passwordVisible;
   }
 
   handleSubmit(): void {
@@ -47,7 +51,7 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
 
     const loginPayload = {
-      username: this.loginForm.value.username, 
+      username: this.loginForm.value.username,
       password: this.loginForm.value.password,
       rememberMe: this.loginForm.value.remember
     };
@@ -57,6 +61,12 @@ export class LoginComponent implements OnInit {
         this.showSuccess = true;
         this.isSubmitting = false;
         this.cdr.detectChanges();
+        timer(3000).pipe(
+          takeUntilDestroyed(this.destroyRef)
+        ).subscribe(() => {
+          this.router.navigate(['/dashboard']);
+        });
+
       },
       error: (error) => {
         this.isSubmitting = false;
@@ -74,7 +84,7 @@ export class LoginComponent implements OnInit {
     });
 
     if (apiError.status === 404 || apiError.status === 401) {
-      const control = this.loginForm.get('username'); 
+      const control = this.loginForm.get('username');
       if (control) {
         control.setErrors({ apiError: apiError.error });
         control.markAsTouched();

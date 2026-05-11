@@ -68,9 +68,22 @@ export class ChatService {
         this.activeChatId.set(chatId);
     }
 
-    updateChatPreview(chatId: string, content: string, time: Date): void {
-        this.chats.update(list => list.map(c =>
-            c.id === chatId ? { ...c, lastMessagePreview: content, lastMessageAt: time } : c
-        ));
+    updateChatPreview(chatId: string, lastMessage: string, timestamp: string | Date): void {
+        this.chats.update((currentChats) => {
+            return currentChats.map((chat) => {
+                if (chat.id === chatId) {
+                    return {
+                        ...chat,
+                        lastMessagePreview: lastMessage,
+                        lastMessageAt: new Date(timestamp)
+                    };
+                }
+                return chat;
+            }).sort((a, b) => {
+                const timeA = new Date(a.lastMessageAt || 0).getTime();
+                const timeB = new Date(b.lastMessageAt || 0).getTime();
+                return timeB - timeA;
+            });
+        });
     }
-}
+} 

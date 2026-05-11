@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../core/services/chat.service';
 import { MessageService } from '../../core/services/message.service'; // 🔥 New service
 import { AuthService } from '../../core/services/auth.service';
+import { WebSocketService } from '../../core/services/websocket.service';
 
 @Component({
     selector: 'app-dashboard',
@@ -18,6 +19,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public chatService = inject(ChatService);
     public messageService = inject(MessageService);
+    public wsService = inject(WebSocketService);
     public auth = inject(AuthService);
 
     showChatMobile = signal<boolean>(false);
@@ -37,6 +39,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnInit() {
+        this.wsService.connect();
         this.chatService.loadChats();
     }
 
@@ -52,6 +55,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.chatService.selectChat(chatId);
         this.messageService.clearMessages();
         this.messageService.loadHistory(chatId, 0);
+
+        this.wsService.subscribeToChat(chatId);
 
         this.showChatMobile.set(true);
     }
