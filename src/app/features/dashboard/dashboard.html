@@ -1,0 +1,93 @@
+<div class="dashboard-wrapper" [class.chat-open]="showChatMobile()">
+  <aside class="sidebar">
+    <header class="sidebar-header">
+      <div class="user-meta">
+        <div class="avatar-circle">
+          {{ auth.currentUser()?.username?.[0]?.toUpperCase() }}
+        </div>
+        <span>{{ auth.currentUser()?.username }}</span>
+      </div>
+      <button class="icon-btn" (click)="auth.logout()">🚪</button>
+    </header>
+
+    <div class="search-box">
+      <input type="text" placeholder="Pesquisar conversas..." />
+    </div>
+
+    <div class="chat-list">
+      @for (chat of chatService.allChats(); track chat.id) {
+      <div
+        class="chat-item"
+        [class.active]="chatService.selectedChat()?.id === chat.id"
+        (click)="selectChat(chat.id)"
+      >
+        <div class="chat-avatar">{{ chat.chatName[0] }}</div>
+        <div class="chat-body">
+          <div class="chat-row">
+            <span class="name">{{ chat.chatName }}</span>
+            <span class="time">{{ chat.lastMessageAt | date : "HH:mm" }}</span>
+          </div>
+          <p class="preview">
+            {{ chat.lastMessagePreview || "Nenhuma mensagem..." }}
+          </p>
+        </div>
+      </div>
+      }
+    </div>
+  </aside>
+
+  <main class="chat-main">
+    @if (chatService.selectedChat(); as chat) {
+      <header class="chat-header">
+        <button class="back-btn" (click)="closeChat()">⬅️</button>
+        <div class="chat-info">
+          <h3>{{ chat.chatName }}</h3>
+          <small class="status">Online</small>
+        </div>
+      </header>
+
+      <div class="message-container" #scrollContainer>
+        <div #topSentinel class="history-loader">
+          @if (messageService.loading()) {
+            <span class="spinner"></span>
+          } @else if (messageService.canLoadMore()) {
+            <span class="load-text">Role para cima para carregar mais</span>
+          }
+        </div>
+
+        @for (msg of messageService.currentMessages(); track msg.id) {
+          <div class="message-row" [class.me]="isMyMessage(msg.senderId)">
+            <div class="message-bubble">
+              <p>{{ msg.content }}</p>
+              <span class="msg-time">{{ msg.createdAt | date : "HH:mm" }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <footer class="input-area">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            [(ngModel)]="newMessage"
+            (keyup.enter)="sendMessage()"
+            placeholder="Escreva uma mensagem..."
+          />
+          <button (click)="sendMessage()" [disabled]="!newMessage().trim()">
+            🚀
+          </button>
+        </div>
+      </footer>
+
+    } @else {
+      <div class="empty-dashboard">
+        <div class="logo-glow">M</div>
+        <h2>Micro-Chat Ecosystem</h2>
+        <p>
+          Selecione uma conversa para começar a transacionar mensagens via
+          RabbitMQ.
+        </p>
+      </div>
+    }
+  </main>
+</div>
