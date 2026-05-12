@@ -7,6 +7,9 @@
         </div>
         <span>{{ auth.currentUser()?.username }}</span>
       </div>
+      <button class="icon-btn" (click)="openNewChat()" title="Nova Conversa">
+          <i data-lucide="message-square-plus"></i>
+        </button>
       <button class="icon-btn" (click)="auth.logout()">🚪</button>
     </header>
 
@@ -35,6 +38,11 @@
       }
     </div>
   </aside>
+
+    <app-modal 
+      #newChatModal
+      (confirm)="handleModalConfirm($event)">
+    </app-modal>
 
   <main class="chat-main">
     @if (chatService.selectedChat(); as chat) {

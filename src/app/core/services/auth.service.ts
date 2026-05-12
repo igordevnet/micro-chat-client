@@ -60,19 +60,28 @@ export class AuthService {
   }
 
   logout(): void {
-    this.http.post(`${this.API_URL}/logout`, {}, { withCredentials: true }).subscribe({
+    this.http.post(
+      `${this.API_URL}/logout`,
+      {}, // empty body
+      {
+        headers: {
+          Authorization: `Bearer ${this.getToken()}`
+        },
+        withCredentials: true
+      }
+    ).subscribe({
       next: () => this.clearLocalSession(),
-      error: () => this.clearLocalSession() 
+      error: () => this.clearLocalSession()
     });
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('chat_auth') ? JSON.parse(localStorage.getItem('chat_auth')!).token : null;
   }
 
   private clearLocalSession(): void {
     localStorage.removeItem('chat_auth');
     this.session.set(null);
-  }
-
-  private getToken(): string | null {
-    return localStorage.getItem('access_token');
   }
 
   private decodeToken(token: string): any {

@@ -1,0 +1,65 @@
+@if (isOpen()) {
+  <div class="modal-backdrop" (click)="close()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      
+      <header class="modal-header">
+        <div class="header-top">
+          <button class="close-btn" (click)="close()">✕</button>
+          <h3>Nova conversa</h3>
+        </div>
+        <div class="search-bar">
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            placeholder="Digite @username para buscar..."
+            autoFocus
+          />
+        </div>
+      </header>
+
+      <div class="modal-content">
+        @if (searchQuery().length >= 3) {
+          <section class="result-section">
+            <small class="section-title">USUÁRIOS ENCONTRADOS</small>
+            
+            @for (user of searchResults(); track user.id) {
+              <div class="user-row">
+                <div class="avatar-circle">
+                  {{ user.username[0] | uppercase }}
+                </div>
+                
+                <div class="user-info">
+                  <span class="username">{{ user.username }}</span>
+                  <small class="bio">Disponível para chat</small>
+                </div>
+
+                <!-- 🤝 Friendship Action -->
+                @if (user.isFriend) {
+                  <button class="chat-btn" (click)="startChat(user.id)">
+                    Conversar
+                  </button>
+                } @else if (user.requestPending) {
+                  <button class="pending-btn" disabled>
+                    Pendente
+                  </button>
+                } @else {
+                  <button class="add-btn" (click)="sendFriendRequest(user.id)">
+                    Adicionar
+                  </button>
+                }
+              </div>
+            } @empty {
+              <div class="empty-state">Nenhum usuário encontrado.</div>
+            }
+          </section>
+        } @else {
+          <!-- WhatsApp style: List recent friends here by default -->
+          <section class="result-section">
+            <small class="section-title">SEUS AMIGOS</small>
+            <!-- Friend list iteration here -->
+          </section>
+        }
+      </div>
+    </div>
+  </div>
+}

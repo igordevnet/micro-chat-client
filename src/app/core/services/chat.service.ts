@@ -31,10 +31,10 @@ export class ChatService {
                     if (data && data.length > 0) {
                         this.chats.set(data);
                     } else {
-                        this.setMocks(); // Fallback if DB is empty
+                        this.setMocks(); 
                     }
                 },
-                error: () => this.setMocks() // Fallback if backend is down
+                error: () => this.setMocks()
             });
     }
 

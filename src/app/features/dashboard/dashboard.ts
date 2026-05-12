@@ -2,24 +2,26 @@ import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, inj
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../core/services/chat.service';
-import { MessageService } from '../../core/services/message.service'; // 🔥 New service
+import { MessageService } from '../../core/services/message.service'; 
 import { AuthService } from '../../core/services/auth.service';
-import { WebSocketService } from '../../core/services/websocket.service';
+//import { WebSocketService } from '../../core/services/websocket.service';
+import { ModalComponent } from '../../shared/components/modal/modal';
 
 @Component({
     selector: 'app-dashboard',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, ModalComponent],
     templateUrl: './dashboard.html',
     styleUrl: './dashboard.scss'
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
     @ViewChild('topSentinel') private topSentinel!: ElementRef;
+    @ViewChild('newChatModal') newChatModal!: ModalComponent;
 
     public chatService = inject(ChatService);
     public messageService = inject(MessageService);
-    public wsService = inject(WebSocketService);
+    //public wsService = inject(WebSocketService);
     public auth = inject(AuthService);
 
     showChatMobile = signal<boolean>(false);
@@ -39,7 +41,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnInit() {
-        this.wsService.connect();
+        //this.wsService.connect();
         this.chatService.loadChats();
     }
 
@@ -56,7 +58,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.messageService.clearMessages();
         this.messageService.loadHistory(chatId, 0);
 
-        this.wsService.subscribeToChat(chatId);
+        //this.wsService.subscribeToChat(chatId);
 
         this.showChatMobile.set(true);
     }
@@ -81,6 +83,15 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     isMyMessage(senderId: number): boolean {
         return senderId === this.auth.currentUser()?.id;
+    }
+
+    openNewChat() {
+    this.newChatModal.open();
+    }
+
+    handleModalConfirm(event: any) {
+        console.log('Modal Action:', event);
+        // Here we will eventually call your FriendshipService or ChatService
     }
 
 
