@@ -62,7 +62,7 @@ export class AuthService {
   logout(): void {
     this.http.post(
       `${this.API_URL}/logout`,
-      {}, // empty body
+      {},
       {
         headers: {
           Authorization: `Bearer ${this.getToken()}`

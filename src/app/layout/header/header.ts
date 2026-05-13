@@ -1,7 +1,9 @@
 
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ChatService } from '../../core/services/chat.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-header',
@@ -17,4 +19,5 @@ export class HeaderComponent {
   onWindowScroll() {
     this.isScrolled = window.scrollY > 20;
   }
+
 }

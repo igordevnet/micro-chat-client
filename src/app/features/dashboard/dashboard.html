@@ -10,28 +10,77 @@
       <button class="icon-btn" (click)="openNewChat()" title="Nova Conversa">
           <i data-lucide="message-square-plus"></i>
         </button>
+
+        <div class="notification-wrapper">
+  
+  <!-- 🔔 The Bell Button -->
+  <button class="bell-btn" (click)="toggleDropdown()">
+    <i class="fas fa-bell"></i> <!-- Use your preferred icon library -->
+    
+    <!-- 🔴 The dynamic unread badge -->
+    @if (notificationService.unreadCount() > 0) {
+      <span class="badge">{{ notificationService.unreadCount() }}</span>
+    }
+  </button>
+  @if (isDropdownOpen()) {
+    <div class="notification-dropdown">
+      <div class="dropdown-header">
+        <h4>Notificações</h4>
+      </div>
+      
+      <div class="dropdown-content">
+        @for (notif of notificationService.allNotifications(); track notif.id) {
+          
+          <div class="notif-item" [class.unread]="!notif.isRead" (click)="onNotificationClick(notif)">
+            
+            <div class="avatar-circle">
+              {{ (notif.senderName ? notif.senderName[0] : 'U') | uppercase }}
+            </div>
+            
+            <div class="notif-details">
+              <p><strong>{{ notif.senderName }}</strong> {{ notif.content }}</p>
+              <small>{{ notif.timestamp | date:'shortTime' }}</small>
+            </div>
+            
+            @if (!notif.isRead) {
+              <div class="unread-dot"></div>
+            }
+          </div>
+
+        } @empty {
+          <div class="empty-state">Você não tem notificações novas.</div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
       <button class="icon-btn" (click)="auth.logout()">🚪</button>
     </header>
 
     <div class="search-box">
-      <input type="text" placeholder="Pesquisar conversas..." />
+      <input 
+        type="text" 
+        placeholder="Pesquisar conversas..." 
+        (input)="onSearchInput($event)"
+      />
     </div>
 
     <div class="chat-list">
-      @for (chat of chatService.allChats(); track chat.id) {
+      @for (chat of filteredChats(); track chat.id) {
       <div
         class="chat-item"
         [class.active]="chatService.selectedChat()?.id === chat.id"
         (click)="selectChat(chat.id)"
       >
-        <div class="chat-avatar">{{ chat.chatName[0] }}</div>
+        <div class="chat-avatar">{{ (chat.chatName ? chat.chatName[0] : 'C') | uppercase }}</div>
         <div class="chat-body">
           <div class="chat-row">
             <span class="name">{{ chat.chatName }}</span>
             <span class="time">{{ chat.lastMessageAt | date : "HH:mm" }}</span>
           </div>
           <p class="preview">
-            {{ chat.lastMessagePreview || "Nenhuma mensagem..." }}
+            {{ chat.lastMessagePreview || " " }}
           </p>
         </div>
       </div>

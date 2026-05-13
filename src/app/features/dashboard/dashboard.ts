@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, inject, signal, effect } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../core/services/chat.service';
@@ -6,6 +6,7 @@ import { MessageService } from '../../core/services/message.service';
 import { AuthService } from '../../core/services/auth.service';
 //import { WebSocketService } from '../../core/services/websocket.service';
 import { ModalComponent } from '../../shared/components/modal/modal';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
     selector: 'app-dashboard',
@@ -23,8 +24,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     public messageService = inject(MessageService);
     //public wsService = inject(WebSocketService);
     public auth = inject(AuthService);
+    notificationService = inject(NotificationService);
 
     showChatMobile = signal<boolean>(false);
+
+    isDropdownOpen = signal(false);
+    chatSearchQuery = signal<string>('');
 
     newMessage = signal<string>('');
     private observer?: IntersectionObserver;
@@ -131,4 +136,49 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         }, 100);
     }
+
+    toggleDropdown() {
+        this.isDropdownOpen.update(v => !v);
+        
+        if (this.isDropdownOpen()) {
+            this.notificationService.loadNotifications(0, 10);
+        }
+    }
+
+    onNotificationClick(notification: any) {
+        if (!notification.isRead) {
+        this.notificationService.markAsRead(notification.id);
+        }
+
+        if (notification.chatId) {
+        this.chatService.selectChat(notification.chatId);
+        }
+
+        this.isDropdownOpen.set(false);
+    }
+
+    getChatName(chat: any): string {
+    if (chat.chatName) return chat.chatName;
+    const myId = this.auth.currentUser()?.id; 
+    const friend = chat.participants?.find((p: any) => p.userId !== myId);
+    return friend?.username || 'Chat Privado';
+    }
+
+    filteredChats = computed(() => {
+    const query = this.chatSearchQuery().toLowerCase().trim();
+    const allChats = this.chatService.allChats();
+
+    if (!query) {
+      return allChats;
+    }
+
+    return allChats.filter(chat => 
+      this.getChatName(chat).toLowerCase().includes(query)
+    );
+  });
+
+  onSearchInput(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.chatSearchQuery.set(target.value);
+  }
 }

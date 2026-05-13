@@ -27,14 +27,13 @@ export class ChatService {
         });
     }
 
-    loadChats(): void {
-        this.http.get<ChatResponse[]>(this.API_URL+'/user', { headers: this.getHeaders() })
+ loadChats(): void {
+        this.http.get<ChatResponse[]>(this.API_URL + '/user', { headers: this.getHeaders() })
             .pipe(
                 switchMap((chats) => {
                     if (!chats || chats.length === 0) {
                         return of([]); 
                     }
-
                     const myUserId = this.auth.currentUser()?.id;
                     const uniqueIds = new Set<number>();
                     
@@ -48,20 +47,37 @@ export class ChatService {
 
                     const idsToFetch = Array.from(uniqueIds);
                     if (idsToFetch.length === 0) {
-                        return of(chats); 
+                        return of(chats);
                     }
 
                     return this.userService.getUsersByIds(idsToFetch).pipe(
                         map((users: any[]) => {
-                            return chats.map(chat => ({
-                                ...chat,
-                                participants: chat.participants?.map((p: any) => {
+                            return chats.map(chat => {
+                                const hydratedParticipants = chat.participants?.map((p: any) => {
                                     const foundUser = users.find(u => u.id === p.userId);
-                                    return { ...p, username: foundUser ? foundUser.username : 'Unknown User' };
-                                })
-                            }));
+                                    return { 
+                                        ...p, 
+                                        username: foundUser ? foundUser.username : `User_${p.userId}` 
+                                    };
+                                });
+
+                                let displayChatName = chat.chatName;
+                                if (!displayChatName) {
+                                    const friend = hydratedParticipants?.find((p: any) => p.userId !== myUserId);
+                                    displayChatName = friend ? friend.username : 'Chat Privado';
+                                }
+
+                                return {
+                                    ...chat,
+                                    participants: hydratedParticipants,
+                                    chatName: displayChatName 
+                                };
+                            });
                         }),
-                        catchError(() => of(chats)) 
+                        catchError((err) => {
+                            console.error('Failed to fetch user names:', err);
+                            return of(chats); 
+                        }) 
                     );
                 })
             )
