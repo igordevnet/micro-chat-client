@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
 import { FriendshipService } from '../../../core/services/friendship.service';
+import { ChatService } from '../../../core/services/chat.service';
 
 @Component({
   selector: 'app-modal',
@@ -14,6 +15,7 @@ import { FriendshipService } from '../../../core/services/friendship.service';
 export class ModalComponent {
   private userService = inject(UserService);
   private friendshipService = inject(FriendshipService);
+  private chatService = inject(ChatService);
 
   isOpen = signal(false);
   searchQuery = signal('');
@@ -90,8 +92,31 @@ export class ModalComponent {
     });
   }
 
-  startChat(userId: number) {
-    console.log('Starting chat with friend:', userId);
-    this.close();
+  startChat(friendId: number, friendName: string) {
+    console.log(`Starting chat with ${friendName} (ID: ${friendId})`);
+
+    const existingChat = this.chatService.getExistingPrivateChat(friendId);
+
+    if (existingChat) {
+      console.log('Chat already exists! Opening it...');
+      
+      if (!existingChat.chatName) {
+         existingChat.chatName = friendName; 
+      }
+      
+      this.chatService.selectChat(existingChat.id as any);
+      this.close();
+      
+    } else {
+      console.log('No chat found. Creating a new one...');
+      
+      this.chatService.createChat(friendId, friendName).subscribe({
+        next: () => {
+          console.log('Chat created and opened with cached name!');
+          this.close();
+        },
+        error: (err) => console.error('Failed to create chat', err)
+      });
+    }
   }
 }

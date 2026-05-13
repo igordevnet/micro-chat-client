@@ -33,9 +33,8 @@
                   <small class="bio">Disponível para chat</small>
                 </div>
 
-                <!-- 🤝 Friendship Action -->
                 @if (user.isFriend) {
-                  <button class="chat-btn" (click)="startChat(user.id)">
+                  <button class="chat-btn" (click)="startChat(user.id, user.username)">
                     Conversar
                   </button>
                 } @else if (user.requestPending) {
@@ -52,18 +51,15 @@
               <div class="empty-state">Nenhum usuário encontrado.</div>
             }
           </section>
-        } <!-- ... (header and search results remain the same) ... -->
+        }
 
         @else {
-          <!-- WhatsApp style: List recent friends here by default -->
           <section class="result-section">
             <small class="section-title">SEUS AMIGOS</small>
             
             @for (friend of friends(); track friend.id) {
-              <!-- Added 'clickable' class to make the whole row a button -->
-              <div class="user-row clickable" (click)="startChat(friend.id)">
+              <div class="user-row clickable" (click)="startChat(friend.id, friend.username)">
                 <div class="avatar-circle">
-                  <!-- Fallback in case username is undefined during testing -->
                   {{ (friend.username ? friend.username[0] : 'U') | uppercase }}
                 </div>
                 
@@ -72,7 +68,7 @@
                   <small class="bio">Disponível para chat</small>
                 </div>
 
-                <button class="chat-btn" (click)="startChat(friend.id); $event.stopPropagation()">
+                <button class="chat-btn" (click)="startChat(friend.id, friend.username); $event.stopPropagation()">
                   Conversar
                 </button>
               </div>
