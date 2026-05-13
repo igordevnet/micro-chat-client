@@ -34,7 +34,10 @@ export class ModalComponent {
     });
   }
 
-  open() { this.isOpen.set(true); }
+  open() { 
+    this.isOpen.set(true); 
+    this.loadFriends(); 
+  }
   
   close() { 
     this.isOpen.set(false);
@@ -58,6 +61,34 @@ export class ModalComponent {
         }
     });
     }
+
+    loadFriends() {
+    this.friendshipService.getFriends().subscribe({
+      next: (ids: number[]) => {
+        console.log('Array of Friend IDs received:', ids);
+        
+        // 🧪 PHASE 1: Temporary mock so the HTML doesn't break while testing
+        const mockUsers = ids.map(id => ({ 
+          id: id, 
+          username: `Amigo ${id}`, // Mock name using the ID
+          isFriend: true 
+        }));
+        this.friends.set(mockUsers);
+
+        /* 🚀 PHASE 2: UNCOMMENT THIS WHEN 'getUsersById' IS READY
+        if (ids.length > 0) {
+          this.userService.getUsersById(ids).subscribe({
+            next: (users) => this.friends.set(users),
+            error: (err) => console.error('Failed to hydrate friend details', err)
+          });
+        } else {
+          this.friends.set([]);
+        }
+        */
+      },
+      error: (err) => console.error('Failed to load friends', err)
+    });
+  }
 
   startChat(userId: number) {
     console.log('Starting chat with friend:', userId);
