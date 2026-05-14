@@ -70,6 +70,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     closeChat() {
         this.showChatMobile.set(false);
+
+        this.chatService.deselectChat(); 
+        
+        this.messageService.clearMessages();
     }
 
     sendMessage() {

@@ -154,20 +154,27 @@ $text-muted: rgba(255, 255, 255, 0.5);
     background: radial-gradient(circle at top right, rgba($accent-indigo, 0.05), transparent);
 
     .chat-header {
-        padding: 18px 30px;
-        border-bottom: 1px solid $glass-border;
+       padding: 18px 30px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
 
-        h3 {
-            margin: 0;
-            font-size: 1.1rem;
+        .back-btn {
+        background: none; 
+        border: none; 
+        color: white; 
+        cursor: pointer; 
+        font-size: 1.2rem;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
         }
 
-        .status {
-            color: #10b981;
-            font-weight: 500;
-            font-size: 0.8rem;
-        }
+        h3 { margin: 0; font-size: 1.1rem; }
+        .status { color: #10b981; font-weight: 500; font-size: 0.8rem; }
     }
 
     .message-container {
@@ -379,7 +386,7 @@ $text-muted: rgba(255, 255, 255, 0.5);
     background: $bg-dark; 
 
     .back-btn {
-      display: block; 
+      display: none; 
     }
 
     .chat-header {
@@ -466,7 +473,12 @@ position: absolute;
   .dropdown-header {
     padding: 15px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;           
+    justify-content: space-between; 
+    align-items: center;
+
     h4 { margin: 0; color: #fff; font-size: 1rem; }
+    button { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
   }
 
   .dropdown-content {

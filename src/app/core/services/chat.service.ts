@@ -14,12 +14,25 @@ export class ChatService {
     private readonly API_URL = `${environment.apiUrl}/chat`;
 
     private chats = signal<ChatResponse[]>([]);
-    private activeChatId = signal<string | null>(null);
 
     readonly allChats = computed(() => this.chats());
-    readonly selectedChat = computed(() =>
-        this.chats().find(c => c.id === this.activeChatId()) || null
-    );
+
+
+    private activeChatId = signal<string | null>(null);
+
+    public selectedChat = computed(() => {
+        const id = this.activeChatId();
+        if (!id) return null;
+        return this.chats().find(c => c.id === id) || null;
+    });
+
+    deselectChat() {
+        this.activeChatId.set(null); 
+    }
+
+    selectChat(chatId: string) {
+        this.activeChatId.set(chatId);
+    }
 
     private getHeaders(): HttpHeaders {
         return new HttpHeaders({
@@ -120,10 +133,6 @@ export class ChatService {
             }
         ];
         this.chats.set(mocks);
-    }
-
-    selectChat(chatId: string): void {
-        this.activeChatId.set(chatId);
     }
 
     getExistingPrivateChat(targetUserId: number): ChatResponse | undefined {
