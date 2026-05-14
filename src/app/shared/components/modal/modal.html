@@ -33,19 +33,30 @@
                   <small class="bio">Disponível para chat</small>
                 </div>
 
-                @if (user.isFriend) {
-                  <button class="chat-btn" (click)="startChat(user.id, user.username)">
-                    Conversar
-                  </button>
-                } @else if (user.requestPending) {
-                  <button class="pending-btn" disabled>
-                    Pendente
-                  </button>
-                } @else {
-                  <button class="add-btn" (click)="sendFriendRequest(user.id)">
-                    Adicionar
-                  </button>
-                }
+                <div class="user-actions">
+                  @switch (getFriendshipStatus(user.id)) {
+                    @case ('FRIEND') {
+                      <button class="chat-btn" (click)="startChat(user.id, user.username)">
+                        Conversar
+                      </button>
+                    }
+                    @case ('PENDING') {
+                      <button class="pending-btn" disabled>
+                        Pendente
+                      </button>
+                    }
+                    @case ('BLOCKED') {
+                      <button class="pending-btn" style="color: #ef4444;" disabled>
+                        Bloqueado
+                      </button>
+                    }
+                    @case ('NONE') {
+                      <button class="add-btn" (click)="sendFriendRequest(user.id)">
+                        Adicionar
+                      </button>
+                    }
+                  }
+                </div>
               </div>
             } @empty {
               <div class="empty-state">Nenhum usuário encontrado.</div>

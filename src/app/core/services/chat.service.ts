@@ -134,13 +134,19 @@ export class ChatService {
         ];
         this.chats.set(mocks);
     }
+    getExistingPrivateChat(friendId: number) {
+    const chats = this.allChats(); 
 
-    getExistingPrivateChat(targetUserId: number): ChatResponse | undefined {
-        return this.chats().find(chat => 
-            chat.type === 'PRIVATE' && 
-            chat.participants?.some((p: any) => p.userId === targetUserId)
-        );
-    }
+    return chats.find(chat => {
+      if (!chat.participants || chat.participants.length === 0) return false;
+
+      const hasFriend = chat.participants.some((p: any) => Number(p.userId) === Number(friendId));
+
+      const isPrivate = chat.participants.length === 2;
+
+      return hasFriend && isPrivate;
+    });
+  }
 
     createChat(targetUserId: number, friendName: string): Observable<ChatResponse> {
         const request = {

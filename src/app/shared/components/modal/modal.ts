@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
 import { FriendshipService } from '../../../core/services/friendship.service';
 import { ChatService } from '../../../core/services/chat.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-modal',
@@ -16,6 +17,7 @@ export class ModalComponent {
   private userService = inject(UserService);
   private friendshipService = inject(FriendshipService);
   private chatService = inject(ChatService);
+  private auth = inject(AuthService);
 
   isOpen = signal(false);
   searchQuery = signal('');
@@ -27,7 +29,10 @@ export class ModalComponent {
       const query = this.searchQuery();
       if (query.length >= 3) {
         this.userService.searchUsers(query, 0).subscribe({
-          next: (res: any) => this.searchResults.set(res.content), 
+          next: (res: any) => {
+            const filtered = res.content.filter((u: any) => u.id !== this.auth.currentUser()?.id);
+            this.searchResults.set(filtered);
+          },
           error: () => this.searchResults.set([])
         });
       } else {
@@ -36,9 +41,10 @@ export class ModalComponent {
     });
   }
 
-  open() { 
-    this.isOpen.set(true); 
-    this.loadFriends(); 
+  open() {
+    this.isOpen.set(true);
+    this.friendshipService.loadFriendshipData(); 
+    this.loadFriends();
   }
   
   close() { 
@@ -64,32 +70,38 @@ export class ModalComponent {
     });
     }
 
-    loadFriends() {
+  loadFriends() {
     this.friendshipService.getFriends().subscribe({
       next: (ids: number[]) => {
-        console.log('Array of Friend IDs received:', ids);
-        
-        // 🧪 PHASE 1: Temporary mock so the HTML doesn't break while testing
-        const mockUsers = ids.map(id => ({ 
-          id: id, 
-          username: `Amigo ${id}`, // Mock name using the ID
-          isFriend: true 
-        }));
-        this.friends.set(mockUsers);
-
-        /* 🚀 PHASE 2: UNCOMMENT THIS WHEN 'getUsersById' IS READY
         if (ids.length > 0) {
-          this.userService.getUsersById(ids).subscribe({
+          this.userService.getUsersByIds(ids).subscribe({
             next: (users) => this.friends.set(users),
             error: (err) => console.error('Failed to hydrate friend details', err)
           });
         } else {
           this.friends.set([]);
         }
-        */
       },
       error: (err) => console.error('Failed to load friends', err)
     });
+  }
+
+  getFriendshipStatus(targetUserId: number): 'FRIEND' | 'PENDING' | 'BLOCKED' | 'NONE' {
+    if (this.friendshipService.friendIds().includes(targetUserId)) {
+      return 'FRIEND';
+    }
+
+    const isPending = this.friendshipService.pendingRequests().some(r => 
+      r.requesterId === targetUserId || r.receiverId === targetUserId
+    );
+    if (isPending) return 'PENDING';
+
+    const isBlocked = this.friendshipService.blockedFriendships().some(b => 
+      b.requesterId === targetUserId || b.receiverId === targetUserId
+    );
+    if (isBlocked) return 'BLOCKED';
+
+    return 'NONE';
   }
 
   startChat(friendId: number, friendName: string) {
