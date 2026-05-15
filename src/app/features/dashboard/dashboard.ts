@@ -2,9 +2,9 @@ import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, inj
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../core/services/chat.service';
-import { MessageService } from '../../core/services/message.service'; 
+import { MessageService } from '../../core/services/message.service';
 import { AuthService } from '../../core/services/auth.service';
-//import { WebSocketService } from '../../core/services/websocket.service';
+import { WebSocketService } from '../../core/services/websocket.service';
 import { ModalComponent } from '../../shared/components/modal/modal';
 import { NotificationService } from '../../core/services/notification.service';
 
@@ -22,8 +22,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public chatService = inject(ChatService);
     public messageService = inject(MessageService);
-    //public wsService = inject(WebSocketService);
+    public wsService = inject(WebSocketService);
     public auth = inject(AuthService);
+    isRecording = signal<boolean>(false);
+    private mediaRecorder: MediaRecorder | null = null;
+    private audioChunks: Blob[] = [];
+    private recordingStartTime: number = 0;
     notificationService = inject(NotificationService);
 
     showChatMobile = signal<boolean>(false);
@@ -46,7 +50,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnInit() {
-        //this.wsService.connect();
+        this.wsService.connect();
         this.chatService.loadChats();
     }
 
@@ -63,7 +67,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.messageService.clearMessages();
         this.messageService.loadHistory(chatId, 0);
 
-        //this.wsService.subscribeToChat(chatId);
+        this.wsService.subscribeToChat(chatId);
 
         this.showChatMobile.set(true);
     }
@@ -71,8 +75,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     closeChat() {
         this.showChatMobile.set(false);
 
-        this.chatService.deselectChat(); 
-        
+        this.chatService.deselectChat();
+
         this.messageService.clearMessages();
     }
 
@@ -82,12 +86,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
         if (!text || !activeChat) return;
 
-        this.messageService.sendMessage(activeChat.id, text).subscribe({
-            next: (msg) => {
-                this.chatService.updateChatPreview(activeChat.id, msg.content, msg.createdAt);
-                this.newMessage.set('');
-            }
-        });
+        this.wsService.sendTextMessage(activeChat.id, text);
+
+        this.newMessage.set('');
+
     }
 
     isMyMessage(senderId: number): boolean {
@@ -95,7 +97,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     openNewChat() {
-    this.newChatModal.open();
+        this.newChatModal.open();
     }
 
     handleModalConfirm(event: any) {
@@ -103,6 +105,74 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         // Here we will eventually call your FriendshipService or ChatService
     }
 
+    onFileSelected(event: any) {
+        const file = event.target.files[0];
+        const activeChat = this.chatService.selectedChat();
+
+        if (!file || !activeChat) return;
+
+        // Optional: Send whatever text is in the input as a caption!
+        const caption = this.newMessage().trim();
+
+        this.messageService.sendFileMessage(activeChat.id, file, caption).subscribe({
+            next: () => {
+                console.log('File uploaded successfully via HTTP');
+                this.newMessage.set(''); // Clear caption
+                event.target.value = ''; // Reset file input
+            },
+            error: (err) => console.error('Failed to upload file', err)
+        });
+    }
+
+    // ==========================================
+    // 🎤 AUDIO RECORDING LOGIC
+    // ==========================================
+    async startRecording() {
+        try {
+            // Request microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            this.mediaRecorder = new MediaRecorder(stream);
+            this.audioChunks = [];
+            this.recordingStartTime = Date.now();
+
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                const durationInSeconds = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+                const activeChat = this.chatService.selectedChat();
+
+                if (activeChat) {
+                    this.messageService.sendAudioMessage(activeChat.id, audioBlob, durationInSeconds).subscribe({
+                        next: () => console.log('Audio sent via HTTP'),
+                        error: (err) => console.error('Failed to send audio', err)
+                    });
+                }
+
+                // Turn off the microphone hardware light
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            this.mediaRecorder.start();
+            this.isRecording.set(true);
+
+        } catch (err) {
+            console.error('Microphone access denied or unsupported', err);
+            alert('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+        }
+    }
+
+    stopRecording() {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            this.mediaRecorder.stop();
+            this.isRecording.set(false);
+        }
+    }
 
     private initInfiniteScroll() {
         this.observer = new IntersectionObserver(([entry]) => {
@@ -143,7 +213,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     toggleDropdown() {
         this.isDropdownOpen.update(v => !v);
-        
+
         if (this.isDropdownOpen()) {
             this.notificationService.loadNotifications(0, 10);
         }
@@ -151,38 +221,54 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     onNotificationClick(notification: any) {
         if (!notification.isRead) {
-        this.notificationService.markAsRead(notification.id);
+            this.notificationService.markAsRead(notification.id);
         }
 
         if (notification.chatId) {
-        this.chatService.selectChat(notification.chatId);
+            this.chatService.selectChat(notification.chatId);
         }
 
         this.isDropdownOpen.set(false);
     }
 
     getChatName(chat: any): string {
-    if (chat.chatName) return chat.chatName;
-    const myId = this.auth.currentUser()?.id; 
-    const friend = chat.participants?.find((p: any) => p.userId !== myId);
-    return friend?.username || 'Chat Privado';
+        if (chat.chatName) return chat.chatName;
+        const myId = this.auth.currentUser()?.id;
+        const friend = chat.participants?.find((p: any) => p.userId !== myId);
+        return friend?.username || 'Chat Privado';
     }
 
     filteredChats = computed(() => {
-    const query = this.chatSearchQuery().toLowerCase().trim();
-    const allChats = this.chatService.allChats();
+        const query = this.chatSearchQuery().toLowerCase().trim();
+        const allChats = this.chatService.allChats();
 
-    if (!query) {
-      return allChats;
+        if (!query) {
+            return allChats;
+        }
+
+        return allChats.filter(chat =>
+            this.getChatName(chat).toLowerCase().includes(query)
+        );
+    });
+
+    onSearchInput(event: Event) {
+        const target = event.target as HTMLInputElement;
+        this.chatSearchQuery.set(target.value);
     }
 
-    return allChats.filter(chat => 
-      this.getChatName(chat).toLowerCase().includes(query)
-    );
-  });
+    isMessageRead(msgCreatedAt: any): boolean {
+        const chat = this.chatService.selectedChat();
+        if (!chat || !chat.participants) return false;
 
-  onSearchInput(event: Event) {
-    const target = event.target as HTMLInputElement;
-    this.chatSearchQuery.set(target.value);
-  }
+        const myId = this.auth.currentUser()?.id;
+        
+        const friend = chat.participants.find((p: any) => Number(p.userId) !== myId);
+        
+        if (!friend || !friend.lastReadAt) return false;
+
+        const msgTime = new Date(msgCreatedAt).getTime();
+        const readTime = new Date(friend.lastReadAt).getTime();
+
+        return msgTime <= readTime;
+    }
 }

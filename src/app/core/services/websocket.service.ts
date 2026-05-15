@@ -1,4 +1,4 @@
-/*import { inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Client, StompSubscription } from '@stomp/stompjs';
 import { AuthService } from './auth.service';
 import { MessageService } from './message.service';
@@ -53,7 +53,6 @@ export class WebSocketService {
 
         this.stompClient.subscribe(`/topic/presence.${userId}`, (msg) => {
             const event: UserStatusEvent = JSON.parse(msg.body);
-            // Update the chat list to show who is online
             console.log(`User ${event.userId} is now ${event.status}`);
         });
 
@@ -69,26 +68,75 @@ export class WebSocketService {
         }
 
         this.chatSubscription = this.stompClient?.subscribe(`/topic/chat.${chatId}`, (msg) => {
-            const data = JSON.parse(msg.body);
+            const rawData = JSON.parse(msg.body);
 
-            if (data.content && !data.actionType) {
-                this.msgService.pushMessage(data);
-                this.chatService.updateChatPreview(chatId, data.content, data.createdAt);
+            if (rawData.action === 'DELETE') {
+                console.log('Message deleted:', rawData.messageId);
+                this.msgService.removeMessage(rawData.messageId);
+                return;
             }
-            else if (data.actionType === 'READ') {
-                console.log('Message read by user:', data.userId);
-                // Update message UI with double-blue checkmarks?
+
+            if (rawData.actionType === 'READ') {
+                console.log(`User ${rawData.userId} read messages up to ${rawData.time}`);
+                this.chatService.updateParticipantReadTime(chatId, rawData.userId, rawData.time);
+                return;
             }
-            else if (data.action === 'DELETE') {
-                console.log('Message deleted:', data.messageId);
-                // this.msgService.removeMessage(data.messageId);
+
+            if (rawData.edited === true || rawData.action === 'EDIT') {
+                console.log('Message edited:', rawData.id);
+                this.msgService.updateMessage(rawData);
+
+                this.chatService.updateChatPreview(chatId, `Editada: ${rawData.content}`, rawData.createdAt);
+                return;
             }
+
+            if (rawData.actionType === 'NEW_MESSAGE' || (!rawData.actionType && rawData.content)) {
+                this.msgService.pushMessage(rawData);
+
+                if (rawData.messageType !== 'SYSTEM') {
+                    let previewText = rawData.content;
+                    if (rawData.attachment) {
+                        previewText = `📎 ${rawData.attachment.fileType || 'Arquivo'}`;
+                    }
+                    this.chatService.updateChatPreview(chatId, previewText, rawData.createdAt);
+                }
+            }
+        });
+    }
+
+    sendTextMessage(chatId: string, content: string) {
+        if (!this.stompClient?.connected) return;
+        this.stompClient.publish({
+            destination: `/app/chat/${chatId}/sendMessage`,
+            body: JSON.stringify({ content, messageType: 'TEXT' })
+        });
+    }
+
+    editMessage(chatId: string, messageId: string, newContent: string) {
+        if (!this.stompClient?.connected) return;
+        this.stompClient.publish({
+            destination: `/app/chat/${chatId}/editMessage`,
+            body: JSON.stringify({ messageId, newContent })
+        });
+    }
+
+    deleteMessage(chatId: string, messageId: string) {
+        if (!this.stompClient?.connected) return;
+        this.stompClient.publish({
+            destination: `/app/chat/${chatId}/deleteMessage`,
+            body: messageId
+        });
+    }
+
+    markChatAsRead(chatId: string) {
+        if (!this.stompClient?.connected) return;
+        this.stompClient.publish({
+            destination: `/app/chat/${chatId}/read`,
+            body: "{}"
         });
     }
 
     disconnect() {
         this.stompClient?.deactivate();
     }
-}*/
-
-import { inject, Injectable } from '@angular/core';
+}

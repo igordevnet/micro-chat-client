@@ -118,8 +118,36 @@
         @for (msg of messageService.currentMessages(); track msg.id) {
           <div class="message-row" [class.me]="isMyMessage(msg.senderId)">
             <div class="message-bubble">
-              <p>{{ msg.content }}</p>
-              <span class="msg-time">{{ msg.createdAt | date : "HH:mm" }}</span>
+              
+              @if (msg.attachment) {
+                @if (msg.attachment.contentType.startsWith('image/')) {
+                  <img [src]="msg.attachment.url" class="msg-image" alt="Imagem anexada" />
+                } 
+                @else if (msg.attachment.contentType.startsWith('audio/')) {
+                  <audio controls class="msg-audio">
+                    <source [src]="msg.attachment.url" type="audio/webm">
+                  </audio>
+                } 
+                @else {
+                  <a [href]="msg.attachment.url" target="_blank" class="msg-file">
+                    📄 {{ msg.attachment.filename || 'Arquivo' }}
+                  </a>
+                }
+              }
+
+              @if (msg.content) {
+                <p>{{ msg.content }}</p>
+              }
+
+              <span class="msg-time">
+                {{ msg.createdAt | date : "HH:mm" }}
+                
+                @if (isMyMessage(msg.senderId)) {
+                  <span class="ticks" [style.color]="isMessageRead(msg.createdAt) ? '#3b82f6' : '#9ca3af'">
+                    {{ isMessageRead(msg.createdAt) ? '✓✓' : '✓' }}
+                  </span>
+                }
+              </span>
             </div>
           </div>
         }
@@ -127,15 +155,35 @@
 
       <footer class="input-area">
         <div class="input-wrapper">
-          <input
-            type="text"
-            [(ngModel)]="newMessage"
-            (keyup.enter)="sendMessage()"
-            placeholder="Escreva uma mensagem..."
-          />
-          <button (click)="sendMessage()" [disabled]="!newMessage().trim()">
-            🚀
+          
+          <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none" />
+          
+          <button class="action-btn attach-btn" (click)="fileInput.click()" title="Anexar arquivo" [disabled]="isRecording()">
+            📎
           </button>
+
+          @if (isRecording()) {
+            <div class="recording-indicator">
+              <span class="red-dot"></span> Gravando áudio...
+            </div>
+          } @else {
+            <input
+              type="text"
+              [(ngModel)]="newMessage"
+              (keyup.enter)="sendMessage()"
+              placeholder="Escreva uma mensagem..."
+            />
+          }
+
+          @if (newMessage().trim() || isRecording()) {
+            <button class="send-btn" (click)="isRecording() ? stopRecording() : sendMessage()">
+              {{ isRecording() ? '⏹️' : '🚀' }}
+            </button>
+          } @else {
+            <button class="mic-btn" (click)="startRecording()">
+              🎤
+            </button>
+          }
         </div>
       </footer>
 

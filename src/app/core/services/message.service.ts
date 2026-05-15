@@ -4,13 +4,13 @@ import { environment } from '../../../environments/environment.development';
 import { MessageResponse } from '../../shared/http/response/message.response';
 import { PaginatedMessage } from '../../shared/http/response/paginated-message.response';
 import { AuthService } from '../../core/services/auth.service';
-import { Observable, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class MessageService {
   private http = inject(HttpClient);
-  private auth = inject(AuthService);
-  private readonly API_URL = `${environment.apiUrl}/message`;
+  public auth = inject(AuthService); 
+  private readonly API_URL = `${environment.apiUrl}/message`; 
 
   private messages = signal<MessageResponse[]>([]);
   private currentPage = signal<number>(0);
@@ -35,35 +35,77 @@ export class MessageService {
     this.http.get<PaginatedMessage>(`${this.API_URL}/${chatId}`, { 
       params, 
       headers: this.getHeaders() 
-    }).subscribe(res => {
-      const reversedContent = [...res.content].reverse();
-      
-      if (page === 0) {
-        this.messages.set(reversedContent);
-      } else {
-        this.messages.update(prev => [...reversedContent, ...prev]);
+    }).subscribe({
+      next: (res) => {
+        const reversedContent = [...res.content].reverse();
+        
+        if (page === 0) {
+          this.messages.set(reversedContent);
+        } else {
+          this.messages.update(prev => [...reversedContent, ...prev]);
+        }
+
+        this.totalPages.set(res.totalPages);
+        this.currentPage.set(res.currentPage);
+        this.isLoadingHistory.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load history', err);
+        this.isLoadingHistory.set(false);
       }
-
-      this.totalPages.set(res.totalPages);
-      this.currentPage.set(res.currentPage);
-      this.isLoadingHistory.set(false);
     });
-  }
-
-  sendMessage(chatId: string, content: string): Observable<MessageResponse> {
-    return this.http.post<MessageResponse>(this.API_URL, { chatId, content }, { 
-      headers: this.getHeaders() 
-    }).pipe(
-      tap(newMsg => this.pushMessage(newMsg))
-    );
-  }
-
-  pushMessage(msg: MessageResponse): void {
-    this.messages.update(prev => [...prev, msg]);
   }
 
   clearMessages(): void {
     this.messages.set([]);
     this.currentPage.set(0);
+  }
+
+  sendFileMessage(chatId: string, file: File, content?: string): Observable<void> {
+    const formData = new FormData();
+    
+    const metadata = { content: content || '', messageType: 'FILE' };
+    formData.append('data', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    
+    formData.append('file', file);
+
+    return this.http.post<void>(`${this.API_URL}/${chatId}/messages`, formData, {
+      headers: this.getHeaders()
+    });
+  }
+
+  sendAudioMessage(chatId: string, audioBlob: Blob, durationInSeconds: number): Observable<void> {
+    const formData = new FormData();
+    
+    const metadata = { duration: durationInSeconds, messageType: 'AUDIO' };
+    formData.append('data', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    
+    formData.append('file', audioBlob, 'voice-message.webm');
+
+    return this.http.post<void>(`${this.API_URL}/${chatId}/audio`, formData, {
+      headers: this.getHeaders()
+    });
+  }
+
+  pushMessage(newMessage: MessageResponse): void {
+    this.messages.update(prev => {
+      const exists = prev.find(m => m.id === newMessage.id);
+      if (exists) {
+        return prev.map(m => m.id === newMessage.id ? newMessage : m);
+      }
+      return [...prev, newMessage];
+    });
+  }
+
+  updateMessage(updatedMessage: MessageResponse): void {
+    this.messages.update(messages => 
+        messages.map(m => m.id === updatedMessage.id ? updatedMessage : m)
+    );
+  }
+
+  removeMessage(messageId: string): void {
+    this.messages.update(messages => 
+        messages.filter(m => m.id !== messageId)
+    );
   }
 }

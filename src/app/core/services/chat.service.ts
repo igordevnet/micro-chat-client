@@ -27,7 +27,7 @@ export class ChatService {
     });
 
     deselectChat() {
-        this.activeChatId.set(null); 
+        this.activeChatId.set(null);
     }
 
     selectChat(chatId: string) {
@@ -40,16 +40,16 @@ export class ChatService {
         });
     }
 
- loadChats(): void {
+    loadChats(): void {
         this.http.get<ChatResponse[]>(this.API_URL + '/user', { headers: this.getHeaders() })
             .pipe(
                 switchMap((chats) => {
                     if (!chats || chats.length === 0) {
-                        return of([]); 
+                        return of([]);
                     }
                     const myUserId = this.auth.currentUser()?.id;
                     const uniqueIds = new Set<number>();
-                    
+
                     chats.forEach(chat => {
                         chat.participants?.forEach((p: any) => {
                             if (p.userId !== myUserId) {
@@ -68,9 +68,9 @@ export class ChatService {
                             return chats.map(chat => {
                                 const hydratedParticipants = chat.participants?.map((p: any) => {
                                     const foundUser = users.find(u => u.id === p.userId);
-                                    return { 
-                                        ...p, 
-                                        username: foundUser ? foundUser.username : `User_${p.userId}` 
+                                    return {
+                                        ...p,
+                                        username: foundUser ? foundUser.username : `User_${p.userId}`
                                     };
                                 });
 
@@ -83,14 +83,14 @@ export class ChatService {
                                 return {
                                     ...chat,
                                     participants: hydratedParticipants,
-                                    chatName: displayChatName 
+                                    chatName: displayChatName
                                 };
                             });
                         }),
                         catchError((err) => {
                             console.error('Failed to fetch user names:', err);
-                            return of(chats); 
-                        }) 
+                            return of(chats);
+                        })
                     );
                 })
             )
@@ -99,7 +99,7 @@ export class ChatService {
                     if (hydratedChats.length > 0) {
                         this.chats.set(hydratedChats);
                     } else {
-                        this.setMocks(); 
+                        this.setMocks();
                     }
                 },
                 error: (err) => {
@@ -135,22 +135,22 @@ export class ChatService {
         this.chats.set(mocks);
     }
     getExistingPrivateChat(friendId: number) {
-    const chats = this.allChats(); 
+        const chats = this.allChats();
 
-    return chats.find(chat => {
-      if (!chat.participants || chat.participants.length === 0) return false;
+        return chats.find(chat => {
+            if (!chat.participants || chat.participants.length === 0) return false;
 
-      const hasFriend = chat.participants.some((p: any) => Number(p.userId) === Number(friendId));
+            const hasFriend = chat.participants.some((p: any) => Number(p.userId) === Number(friendId));
 
-      const isPrivate = chat.participants.length === 2;
+            const isPrivate = chat.participants.length === 2;
 
-      return hasFriend && isPrivate;
-    });
-  }
+            return hasFriend && isPrivate;
+        });
+    }
 
     createChat(targetUserId: number, friendName: string): Observable<ChatResponse> {
         const request = {
-            chatName: null, 
+            chatName: null,
             type: 'ONE_ON_ONE',
             participantIds: [targetUserId]
         };
@@ -161,7 +161,7 @@ export class ChatService {
 
                     const patchedChat = {
                         ...newChat,
-                        participants: newChat.participants?.map((p: any) => 
+                        participants: newChat.participants?.map((p: any) =>
                             p.userId === targetUserId ? { ...p, username: friendName } : p
                         )
                     };
@@ -174,48 +174,63 @@ export class ChatService {
 
     getChatDisplayName(chat: ChatResponse): string {
         if (chat.chatName) {
-            return chat.chatName; 
+            return chat.chatName;
         }
-        
-        const myUserId = this.auth.currentUser()?.id; 
+
+        const myUserId = this.auth.currentUser()?.id;
         const otherParticipant = chat.participants?.find((p: any) => p.userId !== myUserId);
-        
-        return otherParticipant?.username || 'Private Chat'; 
+
+        return otherParticipant?.username || 'Private Chat';
     }
 
-     updateChatPreview(chatId: string, lastMessage: string, timestamp: string | Date): void {
+    updateChatPreview(chatId: string, lastMessage: string, timestamp: string | Date): void {
 
         this.chats.update((currentChats) => {
 
-        return currentChats.map((chat) => {
+            return currentChats.map((chat) => {
 
-        if (chat.id === chatId) {
+                if (chat.id === chatId) {
 
-        return {
+                    return {
 
-        ...chat,
+                        ...chat,
 
-        lastMessagePreview: lastMessage,
+                        lastMessagePreview: lastMessage,
 
-        lastMessageAt: new Date(timestamp)
+                        lastMessageAt: new Date(timestamp)
 
-        };
+                    };
 
-        }
+                }
 
-        return chat;
+                return chat;
 
-        }).sort((a, b) => {
+            }).sort((a, b) => {
 
-        const timeA = new Date(a.lastMessageAt || 0).getTime();
+                const timeA = new Date(a.lastMessageAt || 0).getTime();
 
-        const timeB = new Date(b.lastMessageAt || 0).getTime();
+                const timeB = new Date(b.lastMessageAt || 0).getTime();
 
-        return timeB - timeA;
+                return timeB - timeA;
+
+            });
 
         });
 
-        });
+    }
 
-        } 
+    updateParticipantReadTime(chatId: string, userId: number, timestamp: string) {
+        this.chats.update(chats => chats.map(chat => {
+            if (chat.id === chatId) {
+                const updatedParticipants = chat.participants?.map((p: any) => {
+                    if (Number(p.userId) === Number(userId)) {
+                        return { ...p, lastReadAt: timestamp };
+                    }
+                    return p;
+                });
+                return { ...chat, participants: updatedParticipants };
+            }
+            return chat;
+        }));
+    }
 } 
