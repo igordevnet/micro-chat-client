@@ -4,4 +4,5 @@ export interface SignalingPayload {
   targetId: number;
   chatId: string;
   data: string;
+  isVideo?: boolean;
 }

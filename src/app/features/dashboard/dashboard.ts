@@ -8,6 +8,8 @@ import { WebSocketService } from '../../core/services/websocket.service';
 import { ModalComponent } from '../../shared/components/modal/modal';
 import { NotificationService } from '../../core/services/notification.service';
 import { PresenceService } from '../../core/services/presence.service';
+import { CallService } from '../../core/services/call.service';
+import { FriendshipService } from '../../core/services/friendship.service';
 
 @Component({
     selector: 'app-dashboard',
@@ -21,15 +23,20 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('topSentinel') private topSentinel!: ElementRef;
     @ViewChild('newChatModal') newChatModal!: ModalComponent;
 
+    private mediaRecorder: MediaRecorder | null = null;
+    private audioChunks: Blob[] = [];
+    private recordingStartTime: number = 0;
+    private observer?: IntersectionObserver;
+
+    public callService = inject(CallService);
     public chatService = inject(ChatService);
     public messageService = inject(MessageService);
     public presenceService = inject(PresenceService);
     public wsService = inject(WebSocketService);
+    public friendshipService = inject(FriendshipService);
     public auth = inject(AuthService);
     isRecording = signal<boolean>(false);
-    private mediaRecorder: MediaRecorder | null = null;
-    private audioChunks: Blob[] = [];
-    private recordingStartTime: number = 0;
+
     notificationService = inject(NotificationService);
 
     showChatMobile = signal<boolean>(false);
@@ -38,7 +45,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     chatSearchQuery = signal<string>('');
 
     newMessage = signal<string>('');
-    private observer?: IntersectionObserver;
 
     constructor() {
         effect(() => {
@@ -53,10 +59,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         effect(() => {
             const chats = this.chatService.allChats();
             const myId = this.auth.currentUser()?.id;
-            
+
             if (chats.length > 0 && myId) {
                 const friendIds = new Set<number>();
-                
+
                 chats.forEach(c => {
                     c.participants?.forEach((p: any) => {
                         if (p.userId !== myId) friendIds.add(p.userId);
@@ -132,25 +138,20 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
         if (!file || !activeChat) return;
 
-        // Optional: Send whatever text is in the input as a caption!
         const caption = this.newMessage().trim();
 
         this.messageService.sendFileMessage(activeChat.id, file, caption).subscribe({
             next: () => {
                 console.log('File uploaded successfully via HTTP');
-                this.newMessage.set(''); // Clear caption
-                event.target.value = ''; // Reset file input
+                this.newMessage.set('');
+                event.target.value = '';
             },
             error: (err) => console.error('Failed to upload file', err)
         });
     }
 
-    // ==========================================
-    // 🎤 AUDIO RECORDING LOGIC
-    // ==========================================
     async startRecording() {
         try {
-            // Request microphone access
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             this.mediaRecorder = new MediaRecorder(stream);
@@ -175,7 +176,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
                     });
                 }
 
-                // Turn off the microphone hardware light
                 stream.getTracks().forEach(track => track.stop());
             };
 
@@ -282,9 +282,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!chat || !chat.participants) return false;
 
         const myId = this.auth.currentUser()?.id;
-        
+
         const friend = chat.participants.find((p: any) => Number(p.userId) !== myId);
-        
+
         if (!friend || !friend.lastReadAt) return false;
 
         const msgTime = new Date(msgCreatedAt).getTime();
@@ -298,5 +298,46 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         const myId = this.auth.currentUser()?.id;
         const friend = chat.participants.find((p: any) => p.userId !== myId);
         return friend ? friend.userId : null;
+    }
+
+    startCall(isVideo: boolean) {
+        const chat = this.chatService.selectedChat();
+        const targetId = this.getFriendId(chat);
+
+        if (chat && targetId) {
+            this.callService.startCall(targetId, chat.id, isVideo);
+        }
+    }
+
+    acceptCall(isVideo: boolean = true) {
+        this.callService.acceptCall(isVideo);
+    }
+
+    rejectCall() {
+        this.callService.rejectCall();
+    }
+
+    endCall() {
+        this.callService.endCall(true);
+    }
+
+    blockCurrentChat() {
+        const chat = this.chatService.selectedChat();
+        const targetUserId = this.getFriendId(chat);
+
+        if (!targetUserId) return;
+
+        const confirmBlock = confirm('Tem certeza que deseja bloquear este usuário? Vocês não poderão mais enviar mensagens.');
+        
+        if (confirmBlock) {
+            /*this.friendshipService.blockUser(targetUserId).subscribe({
+                next: () => {
+                    alert('Usuário bloqueado com sucesso.');
+                    this.closeChat(); 
+                    this.friendshipService.loadFriendshipData();
+                },
+                error: (err: any) => console.error('Failed to block user', err)
+            });*/
+        }
     }
 }

@@ -88,6 +88,33 @@
             }
           </section>
         }
+
+        @if (searchQuery().length < 3 && friendshipService.blockedFriendships().length > 0) {
+          <div class="divider"></div>
+          <section class="result-section blocked-section">
+            <small class="section-title">USUÁRIOS BLOQUEADOS</small>
+            
+            @for (block of friendshipService.blockedFriendships(); track block.id) {
+              <div class="user-row blocked-row">
+                <div class="avatar-circle">🚫</div>
+                
+                <div class="user-info">
+                  <span class="username">
+                    Usuário #{{ block.requesterId === auth.currentUser()?.id ? block.receiverId : block.requesterId }}
+                  </span>
+                  
+                  @if (block.blockedBy === auth.currentUser()?.id) {
+                    <small class="bio error-text">Bloqueado por você</small>
+                  } @else {
+                    <small class="bio error-text">Você foi bloqueado</small>
+                  }
+                </div>
+
+                <button class="pending-btn" disabled>Bloqueado</button>
+              </div>
+            }
+          </section>
+        }
       </div>
     </div>
   </div>

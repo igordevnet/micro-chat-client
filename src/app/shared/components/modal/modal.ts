@@ -15,9 +15,9 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class ModalComponent {
   private userService = inject(UserService);
-  private friendshipService = inject(FriendshipService);
+  public friendshipService = inject(FriendshipService);
   private chatService = inject(ChatService);
-  private auth = inject(AuthService);
+  public auth = inject(AuthService);
 
   isOpen = signal(false);
   searchQuery = signal('');

@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, Injector } from '@angular/core';
 import { Client, StompSubscription } from '@stomp/stompjs';
 import { AuthService } from './auth.service';
 import { MessageService } from './message.service';
@@ -8,6 +8,7 @@ import { UserStatusEvent } from '../../shared/interfaces/user-status.event';
 import { SignalingPayload } from '../../shared/interfaces/signaling.payload';
 import { environment } from '../../../environments/environment.development';
 import { PresenceService } from './presence.service';
+import { CallService } from './call.service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -18,6 +19,7 @@ export class WebSocketService {
     private msgService = inject(MessageService);
     private chatService = inject(ChatService);
     private presenceService = inject(PresenceService);
+    private injector = inject(Injector);
 
     private stompClient: Client | null = null;
     private chatSubscription?: StompSubscription;
@@ -46,11 +48,12 @@ export class WebSocketService {
             console.log('System Notification:', notification);
         });
 
-        // 2. WebRTC Signaling
         this.stompClient.subscribe(`/queue/signaling.${userId}`, (msg) => {
             const signal: SignalingPayload = JSON.parse(msg.body);
             console.log('WebRTC Signal Received:', signal.type);
-            // Handle WebRTC logic...
+            
+            const callService = this.injector.get(CallService);
+            callService.handleSignalingMessage(signal);
         });
 
         this.stompClient.subscribe(`/topic/presence.${userId}`, (msg) => {
@@ -70,6 +73,8 @@ export class WebSocketService {
         if (this.chatSubscription) {
             this.chatSubscription.unsubscribe();
         }
+
+        this.markChatAsRead(chatId);
 
         this.chatSubscription = this.stompClient?.subscribe(`/topic/chat.${chatId}`, (msg) => {
             const rawData = JSON.parse(msg.body);
@@ -103,6 +108,7 @@ export class WebSocketService {
                         previewText = `📎 ${rawData.attachment.fileType || 'Arquivo'}`;
                     }
                     this.chatService.updateChatPreview(chatId, previewText, rawData.createdAt);
+                    this.markChatAsRead(chatId);
                 }
             }
         });
@@ -139,6 +145,15 @@ export class WebSocketService {
             body: "{}"
         });
     }
+
+    sendWebRTCSignal(payload: SignalingPayload) {
+    if (!this.stompClient?.connected) return;
+    
+    this.stompClient.publish({
+        destination: `/app/call/signaling`, 
+        body: JSON.stringify(payload)
+    });
+}
 
     disconnect() {
         this.stompClient?.deactivate();

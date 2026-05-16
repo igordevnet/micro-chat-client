@@ -118,6 +118,14 @@
         </small>
         }
       </div>
+
+      <div class="header-call-actions">
+        <button class="call-btn" (click)="startCall(false)" title="Chamada de Voz">📞</button>
+        <button class="call-btn" (click)="startCall(true)" title="Chamada de Vídeo">📹</button>
+        <div class="action-divider"></div>
+
+        <button class="call-btn block-btn" (click)="blockCurrentChat()" title="Bloquear Usuário">🚫</button>
+      </div>
     </header>
 
     <div class="message-container" #scrollContainer>
@@ -213,4 +221,60 @@
     </div>
     }
   </main>
+
+  @if (callService.incomingCall(); as incoming) {
+  <div class="incoming-call-overlay">
+    <div class="call-card">
+
+      <div class="pulse-avatar" [style.background]="incoming.isVideo ? '#10b981' : '#3b82f6'">
+        {{ incoming.isVideo ? '📹' : '📞' }}
+      </div>
+
+      <h3>Chamada de {{ incoming.isVideo ? 'Vídeo' : 'Voz' }}</h3>
+      <p>Alguém está te ligando...</p>
+
+      <div class="call-actions">
+        <button class="reject-btn" (click)="rejectCall()">Recusar</button>
+
+        <button class="accept-btn audio-accept" (click)="acceptCall(false)">
+          Atender com Voz
+        </button>
+
+        @if (incoming.isVideo) {
+        <button class="accept-btn video-accept" (click)="acceptCall(true)">
+          Atender com Vídeo
+        </button>
+        }
+      </div>
+
+    </div>
+  </div>
+  }
+
+  @if (callService.activeCall()) {
+  <div class="active-call-overlay">
+
+    @if (callService.isVideoCall()) {
+    <video class="remote-video" [srcObject]="callService.remoteStream()" autoplay playsinline></video>
+    <div class="local-video-container">
+      <video class="local-video" [srcObject]="callService.localStream()" autoplay playsinline muted></video>
+    </div>
+    } @else {
+    <div class="audio-only-ui">
+      <div class="pulse-avatar voice-pulse">🗣️</div>
+      <h2>Chamada de Voz em Andamento</h2>
+      <p class="time-counter">Conectado</p>
+
+      <audio [srcObject]="callService.remoteStream()" autoplay playsinline></audio>
+    </div>
+    }
+
+    <div class="call-controls">
+      <button class="control-btn end-call-btn" (click)="endCall()">
+        Desligar 🛑
+      </button>
+    </div>
+
+  </div>
+  }
 </div>
