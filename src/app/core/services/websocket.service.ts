@@ -9,6 +9,7 @@ import { SignalingPayload } from '../../shared/interfaces/signaling.payload';
 import { environment } from '../../../environments/environment.development';
 import { PresenceService } from './presence.service';
 import { CallService } from './call.service';
+import { NotificationService } from './notification.service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +21,7 @@ export class WebSocketService {
     private chatService = inject(ChatService);
     private presenceService = inject(PresenceService);
     private injector = inject(Injector);
+    private notificationService = inject(NotificationService);
 
     private stompClient: Client | null = null;
     private chatSubscription?: StompSubscription;
@@ -43,15 +45,26 @@ export class WebSocketService {
     private subscribeToUserEvents(userId: number) {
         if (!this.stompClient) return;
 
-        this.stompClient.subscribe(`/topic/notification.${userId}`, (msg) => {
-            const notification = JSON.parse(msg.body);
-            console.log('System Notification:', notification);
+        this.stompClient.subscribe(`/topic/notification.${userId}`, (notification: any) => {
+            this.notificationService.loadNotifications(0, 10);
+
+            if (notification.chatId) {
+                const chatExists = this.chatService.allChats().some(c => c.id === notification.chatId);
+
+                if (!chatExists) {
+                    console.log('New chat detected! Waiting for DB transaction to commit...');
+
+                    setTimeout(() => {
+                        this.chatService.loadChats();
+                    }, 500);
+                }
+            }
         });
 
         this.stompClient.subscribe(`/queue/signaling.${userId}`, (msg) => {
             const signal: SignalingPayload = JSON.parse(msg.body);
             console.log('WebRTC Signal Received:', signal.type);
-            
+
             const callService = this.injector.get(CallService);
             callService.handleSignalingMessage(signal);
         });
@@ -147,13 +160,13 @@ export class WebSocketService {
     }
 
     sendWebRTCSignal(payload: SignalingPayload) {
-    if (!this.stompClient?.connected) return;
-    
-    this.stompClient.publish({
-        destination: `/app/call/signaling`, 
-        body: JSON.stringify(payload)
-    });
-}
+        if (!this.stompClient?.connected) return;
+
+        this.stompClient.publish({
+            destination: `/app/call/signaling`,
+            body: JSON.stringify(payload)
+        });
+    }
 
     disconnect() {
         this.stompClient?.deactivate();

@@ -5,7 +5,7 @@ export interface NotificationResponse {
     type: string;
     content: string;
     timestamp: Date | string;
-    isRead?: boolean; 
+    read?: boolean; 
     senderName?: string; 
     chatId?: string;
 }

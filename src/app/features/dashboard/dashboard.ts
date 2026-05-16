@@ -10,6 +10,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { PresenceService } from '../../core/services/presence.service';
 import { CallService } from '../../core/services/call.service';
 import { FriendshipService } from '../../core/services/friendship.service';
+import { UserService } from '../../core/services/user.service';
 
 @Component({
     selector: 'app-dashboard',
@@ -18,9 +19,15 @@ import { FriendshipService } from '../../core/services/friendship.service';
     templateUrl: './dashboard.html',
     styleUrl: './dashboard.scss'
 })
-export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+export class DashboardComponent implements OnInit, OnDestroy {
     @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
-    @ViewChild('topSentinel') private topSentinel!: ElementRef;
+    private topSentinel!: ElementRef;
+    @ViewChild('topSentinel') set setupSentinel(el: ElementRef) {
+        if (el) {
+            this.topSentinel = el;
+            this.initInfiniteScroll();
+        }
+    }
     @ViewChild('newChatModal') newChatModal!: ModalComponent;
 
     private mediaRecorder: MediaRecorder | null = null;
@@ -35,6 +42,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     public wsService = inject(WebSocketService);
     public friendshipService = inject(FriendshipService);
     public auth = inject(AuthService);
+    public userService = inject(UserService);
+
+    userNamesCache = signal<Map<number, string>>(new Map());
     isRecording = signal<boolean>(false);
 
     notificationService = inject(NotificationService);
@@ -74,15 +84,44 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
                 }
             }
         });
+
+        effect(() => {
+            const chats = this.chatService.allChats();
+            const myId = this.auth.currentUser()?.id;
+
+            if (chats.length > 0 && myId) {
+                const friendIds = new Set<number>();
+
+                chats.forEach(c => {
+                    c.participants?.forEach((p: any) => {
+                        if (p.userId !== myId) friendIds.add(p.userId);
+                    });
+                });
+
+                if (friendIds.size > 0) {
+                    this.presenceService.fetchPresence(Array.from(friendIds));
+
+                    const missingIds = Array.from(friendIds).filter(id => !this.userNamesCache().has(id));
+
+                    if (missingIds.length > 0) {
+                        this.userService.getUsersByIds(missingIds).subscribe({
+                            next: (users: any[]) => {
+                                this.userNamesCache.update(map => {
+                                    const newMap = new Map(map);
+                                    users.forEach(u => newMap.set(u.id, u.username));
+                                    return newMap;
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+        }, { allowSignalWrites: true });
     }
 
     ngOnInit() {
         this.wsService.connect();
         this.chatService.loadChats();
-    }
-
-    ngAfterViewInit() {
-        this.initInfiniteScroll();
     }
 
     ngOnDestroy() {
@@ -196,18 +235,20 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     private initInfiniteScroll() {
+        if (!this.topSentinel || !this.scrollContainer) return;
+
+        this.observer?.disconnect();
+
         this.observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting && !this.messageService.loading() && this.messageService.canLoadMore()) {
                 this.loadMoreHistory();
             }
         }, {
-            root: this.scrollContainer?.nativeElement,
+            root: this.scrollContainer.nativeElement,
             threshold: 0.1
         });
 
-        if (this.topSentinel) {
-            this.observer.observe(this.topSentinel.nativeElement);
-        }
+        this.observer.observe(this.topSentinel.nativeElement);
     }
 
     private loadMoreHistory() {
@@ -246,7 +287,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         if (notification.chatId) {
-            this.chatService.selectChat(notification.chatId);
+            this.selectChat(notification.chatId);
         }
 
         this.isDropdownOpen.set(false);
@@ -254,20 +295,30 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getChatName(chat: any): string {
         if (chat.chatName) return chat.chatName;
+
         const myId = this.auth.currentUser()?.id;
         const friend = chat.participants?.find((p: any) => p.userId !== myId);
-        return friend?.username || 'Chat Privado';
-    }
 
+        if (!friend) return 'Chat Privado';
+
+        return this.userNamesCache().get(friend.userId) || `Usuário ${friend.userId}`;
+    }
     filteredChats = computed(() => {
         const query = this.chatSearchQuery().toLowerCase().trim();
-        const allChats = this.chatService.allChats();
+
+        let chats = [...this.chatService.allChats()];
+
+        chats.sort((a, b) => {
+            const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
+            const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
+            return timeB - timeA;
+        });
 
         if (!query) {
-            return allChats;
+            return chats;
         }
 
-        return allChats.filter(chat =>
+        return chats.filter(chat =>
             this.getChatName(chat).toLowerCase().includes(query)
         );
     });
@@ -287,8 +338,18 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
         if (!friend || !friend.lastReadAt) return false;
 
-        const msgTime = new Date(msgCreatedAt).getTime();
-        const readTime = new Date(friend.lastReadAt).getTime();
+        const parseDate = (dateData: any): number => {
+            if (!dateData) return 0;
+            if (Array.isArray(dateData)) {
+                const [y, m, d, h = 0, min = 0, s = 0] = dateData;
+                return new Date(y, m - 1, d, h, min, s).getTime();
+            }
+
+            return new Date(dateData).getTime();
+        };
+
+        const msgTime = parseDate(msgCreatedAt);
+        const readTime = parseDate(friend.lastReadAt);
 
         return msgTime <= readTime;
     }
@@ -327,17 +388,29 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
         if (!targetUserId) return;
 
+        const allFriendships = [
+            ...this.friendshipService.pendingRequests(),
+        ];
+
+        const friendshipToBlock = allFriendships.find((f: any) =>
+            f.requesterId === targetUserId || f.receiverId === targetUserId
+        );
+
+        if (!friendshipToBlock) {
+            console.error('Could not find the friendship ID to block!');
+            return;
+        }
+
         const confirmBlock = confirm('Tem certeza que deseja bloquear este usuário? Vocês não poderão mais enviar mensagens.');
-        
+
         if (confirmBlock) {
-            /*this.friendshipService.blockUser(targetUserId).subscribe({
+            this.friendshipService.blockFriendship(friendshipToBlock.id).subscribe({
                 next: () => {
                     alert('Usuário bloqueado com sucesso.');
-                    this.closeChat(); 
-                    this.friendshipService.loadFriendshipData();
+                    this.closeChat();
                 },
-                error: (err: any) => console.error('Failed to block user', err)
-            });*/
+                error: (err) => console.error('Failed to block user', err)
+            });
         }
     }
 }

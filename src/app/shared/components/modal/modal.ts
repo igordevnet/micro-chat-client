@@ -21,8 +21,10 @@ export class ModalComponent {
 
   isOpen = signal(false);
   searchQuery = signal('');
-  searchResults = signal<any[]>([]); 
-  friends = signal<any[]>([]);       
+  searchResults = signal<any[]>([]);
+  friends = signal<any[]>([]);
+
+  hydratedPendingRequests = signal<any[]>([]);
 
   constructor() {
     effect(() => {
@@ -38,65 +40,94 @@ export class ModalComponent {
       } else {
         this.searchResults.set([]);
       }
-    });
+    }, { allowSignalWrites: true });
+
+    effect(() => {
+      const pending = this.friendshipService.pendingRequests();
+      const myId = this.auth.currentUser()?.id;
+
+      if (pending.length > 0 && myId) {
+        const idsToFetch = pending.map(req => req.requesterId === myId ? req.receiverId : req.requesterId);
+
+        const uniqueIds = Array.from(new Set(idsToFetch));
+
+        this.userService.getUsersByIds(uniqueIds).subscribe({
+          next: (users: any[]) => {
+            const hydrated = pending.map(req => {
+              const targetId = req.requesterId === myId ? req.receiverId : req.requesterId;
+              const targetUser = users.find(u => u.id === targetId);
+              return {
+                ...req,
+                username: targetUser ? targetUser.username : `Usuário ${targetId}`
+              };
+            });
+            this.hydratedPendingRequests.set(hydrated);
+          },
+          error: (err) => console.error('Failed to hydrate pending requests', err)
+        });
+      } else {
+        this.hydratedPendingRequests.set([]);
+      }
+    }, { allowSignalWrites: true });
+
+    effect(() => {
+      const ids = this.friendshipService.friendIds();
+      
+      if (ids.length > 0) {
+        this.userService.getUsersByIds(ids).subscribe({
+          next: (users) => this.friends.set(users),
+          error: (err) => console.error('Failed to hydrate friend details', err)
+        });
+      } else {
+        this.friends.set([]);
+      }
+    }, { allowSignalWrites: true });
   }
 
   open() {
     this.isOpen.set(true);
-    this.friendshipService.loadFriendshipData(); 
-    this.loadFriends();
+    this.friendshipService.loadFriendshipData();
   }
-  
-  close() { 
+
+  close() {
     this.isOpen.set(false);
     this.searchQuery.set('');
   }
 
-    sendFriendRequest(targetUserId: number) {
+  sendFriendRequest(targetUserId: number) {
     this.friendshipService.sendRequest(targetUserId).subscribe({
-        next: () => {
-        this.searchResults.update(users => 
-            users.map(u => u.id === targetUserId ? { ...u, requestPending: true } : u)
+      next: () => {
+        this.searchResults.update(users =>
+          users.map(u => u.id === targetUserId ? { ...u, requestPending: true } : u)
         );
         console.log('Request sent successfully!');
-        },
-        error: (err) => {
-        if (err.status === 409) {
-            alert('You already have a pending request with this user.');
-        } else {
-            console.error('Failed to send request', err);
-        }
-        }
-    });
-    }
-
-  loadFriends() {
-    this.friendshipService.getFriends().subscribe({
-      next: (ids: number[]) => {
-        if (ids.length > 0) {
-          this.userService.getUsersByIds(ids).subscribe({
-            next: (users) => this.friends.set(users),
-            error: (err) => console.error('Failed to hydrate friend details', err)
-          });
-        } else {
-          this.friends.set([]);
-        }
       },
-      error: (err) => console.error('Failed to load friends', err)
+      error: (err) => {
+        if (err.status === 409) {
+          alert('You already have a pending request with this user.');
+        } else {
+          console.error('Failed to send request', err);
+        }
+      }
     });
   }
 
-  getFriendshipStatus(targetUserId: number): 'FRIEND' | 'PENDING' | 'BLOCKED' | 'NONE' {
+  getFriendshipStatus(targetUserId: number): 'FRIEND' | 'SENT_REQUEST' | 'RECEIVED_REQUEST' | 'BLOCKED' | 'NONE' {
     if (this.friendshipService.friendIds().includes(targetUserId)) {
       return 'FRIEND';
     }
 
-    const isPending = this.friendshipService.pendingRequests().some(r => 
+    const myId = this.auth.currentUser()?.id;
+
+    const pendingReq = this.friendshipService.pendingRequests().find(r =>
       r.requesterId === targetUserId || r.receiverId === targetUserId
     );
-    if (isPending) return 'PENDING';
 
-    const isBlocked = this.friendshipService.blockedFriendships().some(b => 
+    if (pendingReq) {
+      return pendingReq.requesterId === myId ? 'SENT_REQUEST' : 'RECEIVED_REQUEST';
+    }
+
+    const isBlocked = this.friendshipService.blockedFriendships().some(b =>
       b.requesterId === targetUserId || b.receiverId === targetUserId
     );
     if (isBlocked) return 'BLOCKED';
@@ -104,31 +135,32 @@ export class ModalComponent {
     return 'NONE';
   }
 
-  startChat(friendId: number, friendName: string) {
-    console.log(`Starting chat with ${friendName} (ID: ${friendId})`);
+  getPendingRequestId(targetUserId: number): string {
+    const req = this.friendshipService.pendingRequests().find(r =>
+      r.requesterId === targetUserId || r.receiverId === targetUserId
+    );
+    return req ? req.id : '';
+  }
 
+  startChat(friendId: number, friendName: string) {
     const existingChat = this.chatService.getExistingPrivateChat(friendId);
 
     if (existingChat) {
-      console.log('Chat already exists! Opening it...');
-      
-      if (!existingChat.chatName) {
-         existingChat.chatName = friendName; 
-      }
-      
+      if (!existingChat.chatName) existingChat.chatName = friendName;
       this.chatService.selectChat(existingChat.id as any);
       this.close();
-      
     } else {
-      console.log('No chat found. Creating a new one...');
-      
       this.chatService.createChat(friendId, friendName).subscribe({
-        next: () => {
-          console.log('Chat created and opened with cached name!');
-          this.close();
-        },
+        next: () => this.close(),
         error: (err) => console.error('Failed to create chat', err)
       });
     }
+  }
+
+  answerFriendship(friendshipId: string, accepted: boolean) {
+    this.friendshipService.answerRequest(friendshipId, accepted).subscribe({
+      next: () => console.log(`Friend request ${accepted ? 'accepted' : 'rejected'}`),
+      error: (err) => console.error('Failed to answer friend request', err)
+    });
   }
 }

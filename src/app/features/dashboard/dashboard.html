@@ -37,7 +37,7 @@
               notif of notificationService.allNotifications();
               track notif.id
               ) {
-              <div class="notif-item" [class.unread]="!notif.isRead" (click)="onNotificationClick(notif)">
+              <div class="notif-item" [class.unread]="!notif.read" (click)="onNotificationClick(notif)">
                 <div class="avatar-circle">
                   {{
                   (notif.senderName
@@ -57,7 +57,7 @@
                   </small>
                 </div>
 
-                @if (!notif.isRead) {
+                @if (!notif.read) {
                 <div class="unread-dot"></div>
                 }
               </div>
@@ -84,10 +84,12 @@
     <div class="chat-list">
       @for (chat of filteredChats(); track chat.id) {
       <div class="chat-item" [class.active]="chatService.selectedChat()?.id === chat.id" (click)="selectChat(chat.id)">
-        <div class="chat-avatar">{{ (chat.chatName ? chat.chatName[0] : 'C') | uppercase }}</div>
+        
+        <div class="chat-avatar">{{ getChatName(chat)[0] | uppercase }}</div>
+        
         <div class="chat-body">
           <div class="chat-row">
-            <span class="name">{{ chat.chatName }}</span>
+            <span class="name">{{ getChatName(chat) }}</span>
             <span class="time">{{ chat.lastMessageAt | date : "HH:mm" }}</span>
           </div>
           <p class="preview">
@@ -110,7 +112,7 @@
       </button>
 
       <div class="chat-info">
-        <h3>{{ chat.chatName }}</h3>
+        <h3>{{ getChatName(chat) }}</h3>
 
         @if (getFriendId(chat); as friendId) {
         <small class="status" [class.offline]="presenceService.getStatus(friendId) === 'OFFLINE'">

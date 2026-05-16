@@ -9,7 +9,7 @@ export class CallService {
     private auth = inject(AuthService);
 
     private peerConnection: RTCPeerConnection | null = null;
-    
+
     public localStream = signal<MediaStream | null>(null);
     public remoteStream = signal<MediaStream | null>(null);
     public incomingCall = signal<SignalingPayload | null>(null);
@@ -40,7 +40,7 @@ export class CallService {
             targetId: targetId,
             chatId: chatId,
             isVideo: isVideo,
-            data: JSON.stringify(offer) 
+            data: JSON.stringify(offer)
         });
 
         this.activeCall.set(true);
@@ -72,7 +72,7 @@ export class CallService {
             data: JSON.stringify(answer)
         });
 
-        this.incomingCall.set(null); 
+        this.incomingCall.set(null);
         this.activeCall.set(true);
     }
 
@@ -100,6 +100,16 @@ export class CallService {
                 console.log('Call accepted, setting remote answer...');
                 const answer = JSON.parse(signal.data);
                 await this.peerConnection?.setRemoteDescription(new RTCSessionDescription(answer));
+
+                if (signal.isVideo === false && this.isVideoCall()) {
+                    console.log('Receiver downgraded to Voice Only. Turning off camera.');
+                    this.isVideoCall.set(false);
+
+                    this.localStream()?.getVideoTracks().forEach(track => {
+                        track.enabled = false;
+                        track.stop();
+                    });
+                }
                 break;
 
             case 'ICE_CANDIDATE':
@@ -110,7 +120,7 @@ export class CallService {
             case 'HANG_UP':
             case 'REJECTED':
                 console.log('Call ended by remote user.');
-                this.endCall(false); 
+                this.endCall(false);
                 break;
         }
     }
@@ -163,7 +173,7 @@ export class CallService {
 
         this.localStream()?.getTracks().forEach(track => track.stop());
         this.peerConnection?.close();
-        
+
         this.peerConnection = null;
         this.localStream.set(null);
         this.remoteStream.set(null);

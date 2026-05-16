@@ -20,7 +20,7 @@ export class AuthService {
   constructor() { }
 
   login(credentials: any): Observable<any> {
-    return this.http.post(`${this.API_URL}/local/signin`, credentials).pipe(
+    return this.http.post(`${this.API_URL}/local/signin`, credentials, { withCredentials: true }).pipe(
       tap((response: any) => {
         if (response.accessToken) {
           this.setSession(response.accessToken);

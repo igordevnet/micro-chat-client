@@ -27,7 +27,38 @@ export class FriendshipService {
 
     sendRequest(receiverId: number): Observable<void> {
         return this.http.post<void>(`${this.API_URL}/request`, { receiverId }, { headers: this.getHeaders() })
-            .pipe(tap(() => this.loadFriendshipData())); 
+            .pipe(tap(() => this.loadFriendshipData()));
+    }
+
+    answerRequest(friendshipId: string, isAccepted: boolean): Observable<void> {
+        const payload = {
+            friendshipId: friendshipId,
+            status: isAccepted ? 'ACCEPTED' : 'REJECTED' 
+        };
+
+        return this.http.put<void>(
+            `${this.API_URL}/answer`,
+            payload,
+            { headers: this.getHeaders() }
+        ).pipe(
+            tap(() => {
+                console.log(`Friend request ${isAccepted ? 'accepted' : 'rejected'}`);
+                this.loadFriendshipData(); 
+            })
+        );
+    }
+
+    blockFriendship(friendshipId: string): Observable<void> {
+        return this.http.put<void>(
+            `${this.API_URL}/${friendshipId}/block`,
+            {},
+            { headers: this.getHeaders() }
+        ).pipe(
+            tap(() => {
+                console.log('Friendship blocked successfully');
+                this.loadFriendshipData();
+            })
+        );
     }
 
     getFriends(): Observable<number[]> {

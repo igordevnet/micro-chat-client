@@ -149,3 +149,65 @@
 .modal-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 20px 0;
+  width: 100%;
+}
+
+.blocked-section {
+  .section-title {
+    color: #ef4444; 
+  }
+
+  .blocked-row {
+    opacity: 0.6; 
+    
+    .avatar-circle {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      font-size: 1.2rem;
+    }
+
+    .error-text {
+      color: #ef4444;
+      font-weight: 500;
+    }
+  }
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+
+  button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  .reject-req-btn {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    &:hover { background: #ef4444; color: white; }
+  }
+
+  .accept-req-btn {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    &:hover { background: #10b981; color: white; }
+  }
+}

@@ -18,7 +18,7 @@ export class NotificationService {
     
     readonly allNotifications = computed(() => this.notificationsSignal());
     readonly unreadCount = computed(() => 
-        this.notificationsSignal().filter(n => !n.isRead).length
+        this.notificationsSignal().filter(n => !n.read).length
     );
 
     private getHeaders(): HttpHeaders {
@@ -75,7 +75,7 @@ export class NotificationService {
                 next: () => {
                     this.notificationsSignal.update(notifications => 
                         notifications.map(n => 
-                            n.id === notificationId ? { ...n, isRead: true } : n
+                            n.id === notificationId ? { ...n, read: true } : n
                         )
                     );
                 },
