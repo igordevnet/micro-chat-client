@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { WebSocketService } from '../../core/services/websocket.service';
 import { ModalComponent } from '../../shared/components/modal/modal';
 import { NotificationService } from '../../core/services/notification.service';
+import { PresenceService } from '../../core/services/presence.service';
 
 @Component({
     selector: 'app-dashboard',
@@ -22,6 +23,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public chatService = inject(ChatService);
     public messageService = inject(MessageService);
+    public presenceService = inject(PresenceService);
     public wsService = inject(WebSocketService);
     public auth = inject(AuthService);
     isRecording = signal<boolean>(false);
@@ -45,6 +47,25 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
             if (messages.length > 0 && !isLoading) {
                 this.scrollToBottom();
+            }
+        });
+
+        effect(() => {
+            const chats = this.chatService.allChats();
+            const myId = this.auth.currentUser()?.id;
+            
+            if (chats.length > 0 && myId) {
+                const friendIds = new Set<number>();
+                
+                chats.forEach(c => {
+                    c.participants?.forEach((p: any) => {
+                        if (p.userId !== myId) friendIds.add(p.userId);
+                    });
+                });
+
+                if (friendIds.size > 0) {
+                    this.presenceService.fetchPresence(Array.from(friendIds));
+                }
             }
         });
     }
@@ -270,5 +291,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         const readTime = new Date(friend.lastReadAt).getTime();
 
         return msgTime <= readTime;
+    }
+
+    getFriendId(chat: any): number | null {
+        if (!chat || !chat.participants) return null;
+        const myId = this.auth.currentUser()?.id;
+        const friend = chat.participants.find((p: any) => p.userId !== myId);
+        return friend ? friend.userId : null;
     }
 }

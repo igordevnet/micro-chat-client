@@ -7,6 +7,7 @@ import { FriendshipResponse } from '../../shared/http/response/friendship.respon
 import { UserStatusEvent } from '../../shared/interfaces/user-status.event';
 import { SignalingPayload } from '../../shared/interfaces/signaling.payload';
 import { environment } from '../../../environments/environment.development';
+import { PresenceService } from './presence.service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +17,7 @@ export class WebSocketService {
     private auth = inject(AuthService);
     private msgService = inject(MessageService);
     private chatService = inject(ChatService);
+    private presenceService = inject(PresenceService);
 
     private stompClient: Client | null = null;
     private chatSubscription?: StompSubscription;
@@ -54,6 +56,8 @@ export class WebSocketService {
         this.stompClient.subscribe(`/topic/presence.${userId}`, (msg) => {
             const event: UserStatusEvent = JSON.parse(msg.body);
             console.log(`User ${event.userId} is now ${event.status}`);
+
+            this.presenceService.updatePresence(event.userId, event.status);
         });
 
         this.stompClient.subscribe(`/queue/user.${userId}`, (msg) => {

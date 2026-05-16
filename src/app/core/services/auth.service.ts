@@ -70,7 +70,9 @@ export class AuthService {
         withCredentials: true
       }
     ).subscribe({
-      next: () => this.clearLocalSession(),
+      next: () => {
+        this.clearLocalSession();
+      },
       error: () => this.clearLocalSession()
     });
   }

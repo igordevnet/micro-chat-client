@@ -102,7 +102,12 @@
 
         <div class="chat-info">
           <h3>{{ chat.chatName }}</h3>
-          <small class="status">Online</small>
+          
+          @if (getFriendId(chat); as friendId) {
+            <small class="status" [class.offline]="presenceService.getStatus(friendId) === 'OFFLINE'">
+              {{ presenceService.getStatus(friendId) === 'ONLINE' ? 'Online' : 'Offline' }}
+            </small>
+          }
         </div>
       </header>
 
