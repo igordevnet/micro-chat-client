@@ -721,8 +721,8 @@ $text-muted: rgba(255, 255, 255, 0.5);
     gap: 15px;
 
     .call-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: transparent;
+        border: none;
         color: white;
         width: 40px;
         height: 40px;
@@ -732,9 +732,13 @@ $text-muted: rgba(255, 255, 255, 0.5);
         transition: all 0.2s ease;
 
         &:hover {
-            background: $accent-cyan;
-            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.05);
         }
+    }
+
+    img {
+        width: 20px;
+        height: 20px;
     }
 
     .action-divider {
@@ -746,8 +750,7 @@ $text-muted: rgba(255, 255, 255, 0.5);
 
     .block-btn {
         &:hover {
-            background: #ef4444 !important;
-            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.05);
         }
     }
 }
@@ -957,4 +960,128 @@ $text-muted: rgba(255, 255, 255, 0.5);
             box-shadow: 0 0 40px rgba(99, 102, 241, 0.8), 0 0 80px rgba(6, 182, 212, 0.4);
         }
     }
+}
+
+.message-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+
+    .message-actions-menu {
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transform: scale(0.9);
+        transition: all 0.2s ease;
+
+        .action-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        img {
+            width: 20px;
+            height: 20px;
+        }
+
+    }
+
+    &:hover .message-actions-menu {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.message-row.me .message-wrapper {
+    flex-direction: row-reverse;
+}
+
+.edit-banner {
+    position: absolute;
+    top: -30px;
+    left: 20px;
+    background: #1e1e2d;
+    color: #06b6d4;
+    padding: 4px 12px;
+    border-radius: 12px 12px 0 0;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #333;
+    border-bottom: none;
+
+    .cancel-edit-btn {
+        background: transparent;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-weight: bold;
+
+        &:hover {
+            color: white;
+        }
+    }
+
+    .icon {
+        background: transparent;
+        border: none;
+        color: white;
+        width: 10px;
+        height: 10px;
+        font-size: 1.1rem;
+        transition: all 0.2s ease;
+    }
+
+    img {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.date-separator-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.date-pill {
+  background: rgba(30, 30, 45, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.group-sender-name {
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+  line-height: 1;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

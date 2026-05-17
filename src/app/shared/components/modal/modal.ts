@@ -25,6 +25,9 @@ export class ModalComponent {
   searchQuery = signal('');
   searchResults = signal<any[]>([]);
   friends = signal<any[]>([]);
+  isGroupMode = signal(false);
+  groupName = signal('');
+  selectedGroupMembers = signal<Set<number>>(new Set());
 
   hydratedPendingRequests = signal<any[]>([]);
 
@@ -122,6 +125,45 @@ export class ModalComponent {
   close() {
     this.isOpen.set(false);
     this.searchQuery.set('');
+    this.isGroupMode.set(false);
+    this.selectedGroupMembers.set(new Set());
+    this.groupName.set('');
+  }
+
+  toggleGroupMode() {
+    this.isGroupMode.update(v => !v);
+    this.selectedGroupMembers.set(new Set());
+    this.groupName.set('');
+    this.searchQuery.set('');
+  }
+
+  toggleMemberSelection(userId: number) {
+    this.selectedGroupMembers.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  }
+
+  submitGroup() {
+    const name = this.groupName().trim();
+    const members = Array.from(this.selectedGroupMembers());
+
+    if (!name) return alert('Dê um nome ao grupo!');
+    if (members.length === 0) return alert('Selecione pelo menos 1 amigo!');
+
+    this.chatService.createGroupChat(name, members).subscribe({
+      next: () => {
+        console.log('Group created successfully!');
+        this.close();
+        this.toggleGroupMode();
+      },
+      error: (err) => console.error('Failed to create group', err)
+    });
   }
 
   sendFriendRequest(targetUserId: number) {

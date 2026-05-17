@@ -613,3 +613,19 @@ $text-muted: rgba(255, 255, 255, 0.7);
   margin-left: 0;
   margin-top: 12px;
 }
+
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden !important;
+  display: none !important;
+  pointer-events: none;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 50px rgba(30, 30, 40, 1) inset !important; 
+  -webkit-text-fill-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: white;
+}

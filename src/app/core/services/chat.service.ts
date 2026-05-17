@@ -172,6 +172,47 @@ export class ChatService {
             );
     }
 
+    createGroupChat(groupName: string, participantIds: number[]): Observable<ChatResponse> {
+        const request = {
+            chatName: groupName,
+            type: 'GROUP', 
+            participantIds: participantIds
+        };
+
+        return this.http.post<ChatResponse>(this.API_URL, request, { headers: this.getHeaders() })
+            .pipe(
+                tap((newChat) => {
+                    this.chats.update(chats => [newChat, ...chats]);
+                    this.selectChat(newChat.id as any);
+                })
+            );
+    }
+
+    updateChatName(chatId: string, newName: string): Observable<any> {
+        return this.http.patch(`${this.API_URL}/${chatId}`, { chatName: newName }, { headers: this.getHeaders() })
+            .pipe(
+                tap(() => {
+                    this.chats.update(chats =>
+                        chats.map(c => c.id === chatId ? { ...c, chatName: newName } : c)
+                    );
+
+                })
+            );
+    }
+
+    deleteChat(chatId: string): Observable<void> {
+        return this.http.delete<void>(`${this.API_URL}/${chatId}`, { headers: this.getHeaders() })
+            .pipe(
+                tap(() => {
+                    this.chats.update(chats => chats.filter(c => c.id !== chatId));
+
+                    if (this.activeChatId() === chatId) {
+                        this.deselectChat(); 
+                    }
+                })
+            );
+    }
+
     getChatDisplayName(chat: ChatResponse): string {
         if (chat.chatName) {
             return chat.chatName;
@@ -237,15 +278,15 @@ export class ChatService {
     waitForNewChat(missingChatId: string, attempts = 0) {
         if (attempts > 5) {
             console.error('Gave up waiting for chat to appear in database.');
-            return; 
+            return;
         }
 
         console.log(`Polling for new chat... Attempt ${attempts + 1}`);
 
-        this.http.get<any[]>(this.API_URL, { headers: this.getHeaders() }).subscribe({
+        this.http.get<any[]>(this.API_URL + '/user', { headers: this.getHeaders() }).subscribe({
             next: (chats) => {
                 const found = chats.find(c => c.id === missingChatId);
-                
+
                 if (found) {
                     console.log('✅ Chat found! DB transaction is complete. Updating UI.');
                     this.chats.set(chats);

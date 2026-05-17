@@ -118,19 +118,38 @@
       <div class="chat-info">
         <h3>{{ getChatName(chat) }}</h3>
 
+        @if (chat.type === 'ONE_ON_ONE') {
         @if (getFriendId(chat); as friendId) {
         <small class="status" [class.offline]="presenceService.getStatus(friendId) === 'OFFLINE'">
           {{ presenceService.getStatus(friendId) === 'ONLINE' ? 'Online' : 'Offline' }}
         </small>
         }
+        } @else {
+        <small class="status">{{ chat.participants?.length }} participantes</small>
+        }
       </div>
 
       <div class="header-call-actions">
-        <button class="call-btn" (click)="startCall(false)" title="Chamada de Voz">📞</button>
-        <button class="call-btn" (click)="startCall(true)" title="Chamada de Vídeo">📹</button>
+        <button class="call-btn" (click)="startCall(false)" title="Chamada de Voz">
+          <img src="assets/phone-call.png" alt="Chamada de Voz" />
+        </button>
+        <button class="call-btn" (click)="startCall(true)" title="Chamada de Vídeo">
+          <img src="assets/video-camera.png" alt="Chamada de Vídeo" />
+        </button>
         <div class="action-divider"></div>
 
-        <button class="call-btn block-btn" (click)="blockCurrentChat()" title="Bloquear Usuário">🚫</button>
+        <button class="call-btn" (click)="editCurrentChatName()" title="Renomear Conversa">
+          <img src="assets/edit.png" alt="Renomear" />
+        </button>
+        <button class="call-btn block-btn" (click)="deleteCurrentChat()" title="Apagar Conversa">
+          <img src="assets/bin.png" alt="Apagar" />
+        </button>
+
+        @if (chat.type === 'ONE_ON_ONE') {
+        <button class="call-btn block-btn" (click)="blockCurrentChat()" title="Bloquear Usuário">
+          <img src="assets/block.png" alt="Bloquear" />
+        </button>
+        }
       </div>
     </header>
 
@@ -143,39 +162,53 @@
         }
       </div>
 
-      @for (msg of messageService.currentMessages(); track msg.id) {
+      @for (msg of messageService.currentMessages(); track msg.id; let i = $index) {
+
+      @if (showDateSeparator(i, messageService.currentMessages())) {
+      <div class="date-separator-wrapper">
+        <span class="date-pill">{{ getDateLabel(msg.createdAt) }}</span>
+      </div>
+      }
+
       <div class="message-row" [class.me]="isMyMessage(msg.senderId)">
-        <div class="message-bubble">
+        <div class="message-wrapper">
+          <div class="message-bubble">
 
-          @if (msg.attachment) {
-          @if (msg.attachment.contentType.startsWith('image/')) {
-          <img [src]="msg.attachment.url" class="msg-image" alt="Imagem anexada" />
-          }
-          @else if (msg.attachment.contentType.startsWith('audio/')) {
-          <audio controls class="msg-audio">
-            <source [src]="msg.attachment.url" type="audio/webm">
-          </audio>
-          }
-          @else {
-          <a [href]="msg.attachment.url" target="_blank" class="msg-file">
-            📄 {{ msg.attachment.filename || 'Arquivo' }}
-          </a>
-          }
-          }
-
-          @if (msg.content) {
-          <p>{{ msg.content }}</p>
-          }
-
-          <span class="msg-time">
-            {{ msg.createdAt | date : "HH:mm" }}
-
-            @if (isMyMessage(msg.senderId)) {
-            <span class="ticks" [style.color]="isMessageRead(msg.createdAt) ? '#3b82f6' : '#9ca3af'">
-              {{ isMessageRead(msg.createdAt) ? '✓✓' : '✓' }}
-            </span>
+            @if (!isMyMessage(msg.senderId) && chat.type === 'GROUP') {
+            <div class="group-sender-name" [style.color]="getSenderColor(msg.senderId)">
+              {{ getUserName(msg.senderId) }}
+            </div>
             }
-          </span>
+
+            @if (msg.content) {
+            <p>{{ msg.content }}</p>
+            }
+
+            <span class="msg-time">
+              {{ msg.createdAt | date : "HH:mm" }}
+              @if (isMyMessage(msg.senderId)) {
+              <span class="ticks" [style.color]="isMessageRead(msg.createdAt) ? '#3b82f6' : '#9ca3af'">
+                {{ isMessageRead(msg.createdAt) ? '✓✓' : '✓' }}
+              </span>
+              }
+            </span>
+          </div>
+
+          @if (isMyMessage(msg.senderId)) {
+          <div class="message-actions-menu"> 
+            <button class="action-btn" (click)="startEditing(msg)" title="Editar">
+
+              <img src="assets/edit.png" alt="Editar" />
+
+            </button>
+
+            <button class="action-btn" (click)="deleteMessage(msg.id)" title="Apagar">
+
+              <img src="assets/bin.png" alt="Apagar" />
+
+            </button>
+          </div>
+          }
         </div>
       </div>
       }
@@ -197,6 +230,12 @@
           <span class="red-dot"></span> Gravando áudio...
         </div>
         } @else {
+        @if (editingMessageId()) {
+        <div class="edit-banner">
+          <span><img class="icon" src="assets/edit.png" alt="Editar" /> Editando mensagem...</span>
+          <button class="cancel-edit-btn" (click)="cancelEditing()">✕</button>
+        </div>
+        }
         <input type="text" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()"
           placeholder="Escreva uma mensagem..." />
         }

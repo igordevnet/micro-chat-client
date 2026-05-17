@@ -45,11 +45,14 @@ export class WebSocketService {
     private subscribeToUserEvents(userId: number) {
         if (!this.stompClient) return;
 
-        this.stompClient.subscribe(`/topic/notification.${userId}`, (notification: any) => {
+        this.stompClient.subscribe(`/topic/notification.${userId}`, (msg: any) => {
             this.notificationService.loadNotifications(0, 10);
+            const notification = JSON.parse(msg.body);
 
+            console.log('New notification received for user:', userId, 'Notification:', notification);
             if (notification.chatId) {
                 const chatExists = this.chatService.allChats().some(c => c.id === notification.chatId);
+                console.log('Notification for chat:', notification.chatId, 'Chat exists:', chatExists);
 
                 if (!chatExists) {
                     console.log('New chat detected! Waiting for DB transaction to commit...');
@@ -85,12 +88,18 @@ export class WebSocketService {
             this.chatSubscription.unsubscribe();
         }
 
+        if (!this.stompClient || !this.stompClient.connected) {
+            console.error('⏳ STOMP is not connected yet! Reconnecting...');
+            this.connect();
+            return;
+        }
+
         this.markChatAsRead(chatId);
 
         this.chatSubscription = this.stompClient?.subscribe(`/topic/chat.${chatId}`, (msg) => {
             const rawData = JSON.parse(msg.body);
 
-            if (rawData.action === 'DELETE') {
+            if (rawData.action === 'DELETE_MESSAGE') {
                 console.log('Message deleted:', rawData.messageId);
                 this.msgService.removeMessage(rawData.messageId);
                 return;
@@ -102,7 +111,7 @@ export class WebSocketService {
                 return;
             }
 
-            if (rawData.edited === true || rawData.action === 'EDIT') {
+            if (rawData.edited === true || rawData.action === 'EDIT_MESSAGE') {
                 console.log('Message edited:', rawData.id);
                 this.msgService.updateMessage(rawData);
 
@@ -112,14 +121,13 @@ export class WebSocketService {
 
             if (rawData.actionType === 'NEW_MESSAGE' || (!rawData.actionType && rawData.content)) {
                 this.msgService.pushMessage(rawData);
-
+                this.markChatAsRead(chatId);
                 if (rawData.messageType !== 'SYSTEM') {
                     let previewText = rawData.content;
                     if (rawData.attachment) {
                         previewText = `📎 ${rawData.attachment.fileType || 'Arquivo'}`;
                     }
                     this.chatService.updateChatPreview(chatId, previewText, rawData.createdAt);
-                    this.markChatAsRead(chatId);
                 }
             }
         });
@@ -133,11 +141,11 @@ export class WebSocketService {
         });
     }
 
-    editMessage(chatId: string, messageId: string, newContent: string) {
+    editMessage(chatId: string, id: string, content: string) {
         if (!this.stompClient?.connected) return;
         this.stompClient.publish({
             destination: `/app/chat/${chatId}/editMessage`,
-            body: JSON.stringify({ messageId, newContent })
+            body: JSON.stringify({ id: id, content })
         });
     }
 

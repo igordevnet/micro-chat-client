@@ -5,15 +5,27 @@
     <header class="modal-header">
       <div class="header-top">
         <button class="close-btn" (click)="close()">✕</button>
-        <h3>Nova conversa</h3>
+
+        <h3>{{ isGroupMode() ? 'Novo Grupo' : 'Nova conversa' }}</h3>
+
+        <button class="group-toggle-btn" (click)="toggleGroupMode()">
+          {{ isGroupMode() ? 'Cancelar' : 'Criar Grupo 👥' }}
+        </button>
       </div>
+
+      @if (!isGroupMode()) {
       <div class="search-bar">
         <input type="text" [(ngModel)]="searchQuery" placeholder="Digite @username para buscar..." autoFocus />
       </div>
+      } @else {
+      <div class="search-bar group-name-input">
+        <input type="text" [(ngModel)]="groupName" placeholder="Nome do Grupo..." autoFocus />
+      </div>
+      }
     </header>
 
     <div class="modal-content">
-
+      @if (!isGroupMode()) {
       @if (searchQuery().trim().length >= 3) {
       <section class="result-section">
         <small class="section-title">USUÁRIOS ENCONTRADOS</small>
@@ -161,6 +173,39 @@
         }
       </section>
       }
+      }
+      }
+      @else {
+      <section class="result-section">
+        <small class="section-title">SELECIONE OS PARTICIPANTES</small>
+
+        @for (friend of friends(); track friend.id) {
+        <div class="user-row clickable" [class.selected-row]="selectedGroupMembers().has(friend.id)"
+          (click)="toggleMemberSelection(friend.id)">
+
+          <div class="avatar-circle">
+            {{ (friend.username ? friend.username[0] : 'U') | uppercase }}
+          </div>
+
+          <div class="user-info">
+            <span class="username">{{ friend.username }}</span>
+          </div>
+
+          <div class="checkbox-circle" [class.checked]="selectedGroupMembers().has(friend.id)">
+            {{ selectedGroupMembers().has(friend.id) ? '✓' : '' }}
+          </div>
+        </div>
+        } @empty {
+        <div class="empty-state">Você precisa de amigos para criar um grupo.</div>
+        }
+      </section>
+
+      <div class="modal-footer">
+        <button class="submit-group-btn" [disabled]="selectedGroupMembers().size === 0 || !groupName().trim()"
+          (click)="submitGroup()">
+          Confirmar Grupo ({{ selectedGroupMembers().size }})
+        </button>
+      </div>
       }
     </div>
   </div>

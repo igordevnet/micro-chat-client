@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, inject, signal, effect, computed } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, inject, signal, effect, computed, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../core/services/chat.service';
@@ -33,6 +33,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private mediaRecorder: MediaRecorder | null = null;
     private audioChunks: Blob[] = [];
     private recordingStartTime: number = 0;
+    private lastSubscribedChatId: string | null = null;
     private observer?: IntersectionObserver;
 
     public callService = inject(CallService);
@@ -50,6 +51,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     notificationService = inject(NotificationService);
 
     showChatMobile = signal<boolean>(false);
+    editingMessageId = signal<string | null>(null);
 
     isDropdownOpen = signal(false);
     chatSearchQuery = signal<string>('');
@@ -82,6 +84,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 if (friendIds.size > 0) {
                     this.presenceService.fetchPresence(Array.from(friendIds));
                 }
+            }
+        });
+
+        effect(() => {
+            const chat = this.chatService.selectedChat();
+            
+            if (!chat) {
+                this.lastSubscribedChatId = null;
+                return;
+            }
+
+            if (chat.id !== this.lastSubscribedChatId) {
+                this.lastSubscribedChatId = chat.id;
+
+                untracked(() => {
+                    console.log(`🔌 Wiring up WebSockets for Chat: ${chat.id}`);
+                    this.messageService.clearMessages();
+                    this.messageService.loadHistory(chat.id, 0);
+                    this.wsService.subscribeToChat(chat.id);
+                });
             }
         });
 
@@ -153,10 +175,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         if (!text || !activeChat) return;
 
+        if (this.editingMessageId()) {
+            this.wsService.editMessage(activeChat.id, this.editingMessageId()!, text);
+            this.cancelEditing();
+            return;
+        }
+
         this.wsService.sendTextMessage(activeChat.id, text);
-
         this.newMessage.set('');
-
     }
 
     isMyMessage(senderId: number): boolean {
@@ -337,7 +363,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (!chat || !chat.participants) return false;
 
         const myId = this.auth.currentUser()?.id;
-
         const friend = chat.participants.find((p: any) => Number(p.userId) !== myId);
 
         if (!friend || !friend.lastReadAt) return false;
@@ -345,17 +370,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const parseDate = (dateData: any): number => {
             if (!dateData) return 0;
             if (Array.isArray(dateData)) {
-                const [y, m, d, h = 0, min = 0, s = 0] = dateData;
-                return new Date(y, m - 1, d, h, min, s).getTime();
+                const [y, m, d, h = 0, min = 0, s = 0, nano = 0] = dateData;
+                const ms = Math.floor(nano / 1000000);
+                return new Date(y, m - 1, d, h, min, s, ms).getTime();
             }
-
             return new Date(dateData).getTime();
         };
 
         const msgTime = parseDate(msgCreatedAt);
         const readTime = parseDate(friend.lastReadAt);
 
-        return msgTime <= readTime;
+        return msgTime <= (readTime + 500);
     }
 
     getFriendId(chat: any): number | null {
@@ -393,12 +418,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (!targetUserId) return;
 
         const confirmBlock = confirm('Tem certeza que deseja bloquear este usuário? Vocês não poderão mais enviar mensagens.');
-        
+
         if (confirmBlock) {
             this.friendshipService.blockUser(targetUserId).subscribe({
                 next: () => {
                     alert('Usuário bloqueado com sucesso.');
-                    this.closeChat(); 
+                    this.closeChat();
                 },
                 error: (err) => console.error('Failed to block user', err)
             });
@@ -408,12 +433,98 @@ export class DashboardComponent implements OnInit, OnDestroy {
     isChatBlocked = computed(() => {
         const chat = this.chatService.selectedChat();
         const targetId = this.getFriendId(chat);
-        
+
         if (!targetId) return false;
 
-        return this.friendshipService.blockedFriendships().some(b => 
+        return this.friendshipService.blockedFriendships().some(b =>
             b.requesterId === targetId || b.receiverId === targetId
         );
     });
 
+    startEditing(msg: any) {
+        this.editingMessageId.set(msg.id);
+        this.newMessage.set(msg.content || '');
+    }
+
+    cancelEditing() {
+        this.editingMessageId.set(null);
+        this.newMessage.set('');
+    }
+
+    deleteMessage(msgId: string) {
+        if (confirm('Tem certeza que deseja apagar esta mensagem?')) {
+            const activeChat = this.chatService.selectedChat();
+            if (activeChat) {
+                this.wsService.deleteMessage(activeChat.id, msgId);
+                this.messageService.removeMessage(msgId);
+            }
+        }
+    }
+
+    editCurrentChatName() {
+        const chat = this.chatService.selectedChat();
+        if (!chat) return;
+
+        const newName = prompt('Digite o novo nome para a conversa:', chat.chatName || '');
+        if (newName && newName.trim()) {
+            this.chatService.updateChatName(chat.id, newName.trim()).subscribe({
+                next: () => console.log('Chat renamed!'),
+                error: (err) => console.error('Failed to rename chat', err)
+            });
+        }
+    }
+
+    deleteCurrentChat() {
+        const chat = this.chatService.selectedChat();
+        if (!chat) return;
+
+        if (confirm('Aviso: Esta ação apagará a conversa permanentemente. Deseja continuar?')) {
+            this.chatService.deleteChat(chat.id).subscribe({
+                next: () => {
+                    alert('Conversa apagada.');
+                    this.closeChat();
+                },
+                error: (err) => console.error('Failed to delete chat', err)
+            });
+        }
+    }
+
+    showDateSeparator(index: number, messages: any[]): boolean {
+        if (index === 0) return true;
+
+        const currentDate = new Date(messages[index].createdAt).toDateString();
+        const previousDate = new Date(messages[index - 1].createdAt).toDateString();
+
+        return currentDate !== previousDate;
+    }
+
+    getDateLabel(dateString: string | Date): string {
+        const date = new Date(dateString);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (date.toDateString() === today.toDateString()) return 'Hoje';
+        if (date.toDateString() === yesterday.toDateString()) return 'Ontem';
+
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    }
+
+    getUserName(userId: number): string {
+        const cachedName = this.userNamesCache().get(userId);
+        if (cachedName) return cachedName;
+
+        const chat = this.chatService.selectedChat();
+        if (chat?.participants) {
+            const p = chat.participants.find((p: any) => p.userId === userId);
+            if (p?.username) return p.username;
+        }
+
+        return `Usuário ${userId}`;
+    }
+
+    getSenderColor(userId: number): string {
+        const colors = ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa', '#2dd4bf', '#fb7185'];
+        return colors[userId % colors.length];
+    }
 }
