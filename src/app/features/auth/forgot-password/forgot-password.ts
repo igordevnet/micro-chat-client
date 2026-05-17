@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service'; 
+import { AuthService } from '../../../core/services/auth.service';
 import { ApiError } from '../../../shared/interfaces/error';
 
 @Component({
@@ -17,6 +17,8 @@ export class ForgotPasswordComponent implements OnInit {
   isSubmitting = false;
   showSuccess = false;
   activeField = '';
+  public apiError?: ApiError;
+
 
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
@@ -50,11 +52,18 @@ export class ForgotPasswordComponent implements OnInit {
         this.isSubmitting = false;
         this.cdr.detectChanges();
       },
-      error: (error) => {
+      error: (err) => {
         this.isSubmitting = false;
-        const apiError = error.error as ApiError;
-        this.applyApiErrors(apiError);
+
+        if (err.status === 0) {
+          this.apiError = { status: 0, error: 'Servidor offline ou inacessível.' } as ApiError;
+        } else {
+          this.apiError = err.error || { status: err.status, error: 'Ocorreu um erro no servidor.' };
+        }
+
+        this.applyApiErrors(this.apiError!);
         this.triggerShake();
+        this.cdr.detectChanges();
       }
     });
   }
@@ -88,7 +97,7 @@ export class ForgotPasswordComponent implements OnInit {
     const element = document.querySelector('.login-card') as HTMLElement;
     if (element) {
       element.classList.remove('shake-animation');
-      void element.offsetWidth; 
+      void element.offsetWidth;
       element.classList.add('shake-animation');
     }
   }

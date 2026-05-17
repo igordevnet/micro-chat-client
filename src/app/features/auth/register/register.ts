@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit, signal, Writa
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service'; 
+import { AuthService } from '../../../core/services/auth.service';
 import { timer } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RegisterResponse } from '../../../shared/http/response/register.response';
@@ -15,11 +15,11 @@ import { PopUpComponent } from '../../../shared/components/pop-up/pop-up';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, PopUpComponent],
   templateUrl: './register.html',
-  styleUrl: './register.scss' 
+  styleUrl: './register.scss'
 })
 export class RegisterComponent {
   public apiError: WritableSignal<ApiError | undefined> = signal(undefined);
-  
+
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   private cdr = inject(ChangeDetectorRef);
@@ -57,8 +57,8 @@ export class RegisterComponent {
     return !!(control && control.invalid && (control.dirty || control.touched));
   }
 
-  togglePassword() { 
-    this.passwordVisible = !this.passwordVisible; 
+  togglePassword() {
+    this.passwordVisible = !this.passwordVisible;
   }
 
   handleSignup(): void {
@@ -89,11 +89,18 @@ export class RegisterComponent {
           this.router.navigate(['/verify-email'], { queryParams: { email: authDto.email } });
         });
       },
-      error: (error) => {
+      error: (err) => {
         this.isSubmitting = false;
-        const apiError = error.error as ApiError;
-        this.applyApiErrors(apiError);
+
+        if (err.status === 0) {
+          this.apiError.set({ status: 0, error: 'Servidor offline ou inacessível.' } as ApiError);
+        } else {
+          this.apiError.set(err.error || { status: err.status, error: 'Ocorreu um erro no servidor.' });
+        }
+
+        this.applyApiErrors(this.apiError()!);
         this.triggerShake();
+        this.cdr.detectChanges();
       },
       complete: () => {
         this.isSubmitting = false;

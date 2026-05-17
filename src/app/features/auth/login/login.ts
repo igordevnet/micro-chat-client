@@ -68,11 +68,18 @@ export class LoginComponent implements OnInit {
         });
 
       },
-      error: (error) => {
+      error: (err) => {
         this.isSubmitting = false;
-        this.apiError = error.error as ApiError;
-        this.applyApiErrors(this.apiError);
+
+        if (err.status === 0) {
+          this.apiError = { status: 0, error: 'Servidor offline ou inacessível.' } as ApiError;
+        } else {
+          this.apiError = err.error || { status: err.status, error: 'Ocorreu um erro no servidor.' };
+        }
+
+        this.applyApiErrors(this.apiError!);
         this.triggerShake();
+        this.cdr.detectChanges();
       }
     });
   }
@@ -83,12 +90,17 @@ export class LoginComponent implements OnInit {
       control?.setErrors(null);
     });
 
-    if (apiError.status === 404 || apiError.status === 401) {
-      const control = this.loginForm.get('username');
-      if (control) {
-        control.setErrors({ apiError: apiError.error });
-        control.markAsTouched();
+    const control = this.loginForm.get('username');
+    if (control) {
+      if (apiError.status === 0 || apiError.status >= 500) {
+        control.setErrors({ apiError: 'Servidor indisponível no momento.' });
       }
+      else if (apiError.status === 404 || apiError.status === 401) {
+        const errorMsg = typeof apiError.error === 'string' ? apiError.error : 'Usuário ou senha incorretos';
+        control.setErrors({ apiError: errorMsg });
+      }
+
+      control.markAsTouched();
     }
   }
 
