@@ -1085,3 +1085,27 @@ $text-muted: rgba(255, 255, 255, 0.5);
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.chat-image {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.chat-audio {
+  max-width: 250px;
+  margin-bottom: 8px;
+}
+
+.file-link {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #06b6d4;
+  text-decoration: none;
+  margin-bottom: 8px;
+  
+  &:hover { background: rgba(255, 255, 255, 0.2); }
+}

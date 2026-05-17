@@ -89,7 +89,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         effect(() => {
             const chat = this.chatService.selectedChat();
-            
+
             if (!chat) {
                 this.lastSubscribedChatId = null;
                 return;
@@ -526,5 +526,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     getSenderColor(userId: number): string {
         const colors = ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa', '#2dd4bf', '#fb7185'];
         return colors[userId % colors.length];
+    }
+
+    formatAttachmentUrl(url: string): string {
+        return url || '';
     }
 }

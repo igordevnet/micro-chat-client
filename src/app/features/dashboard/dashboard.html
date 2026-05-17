@@ -180,6 +180,20 @@
             </div>
             }
 
+            @if (msg.attachment) {
+              <div class="attachment-preview">
+                @if (msg.attachment.contentType?.startsWith('image/')) {
+                  <img [src]="formatAttachmentUrl(msg.attachment.url)" alt="Imagem" class="chat-image" />
+                } @else if (msg.attachment.contentType?.startsWith('audio/')) {
+                  <audio controls [src]="formatAttachmentUrl(msg.attachment.url)" class="chat-audio"></audio>
+                } @else {
+                  <a [href]="formatAttachmentUrl(msg.attachment.url)" target="_blank" class="file-link">
+                    📎 {{ msg.attachment.filename || 'Baixar Arquivo' }}
+                  </a>
+                }
+              </div>
+            }
+
             @if (msg.content) {
             <p>{{ msg.content }}</p>
             }
