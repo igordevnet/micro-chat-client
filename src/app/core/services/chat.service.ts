@@ -233,4 +233,27 @@ export class ChatService {
             return chat;
         }));
     }
+
+    waitForNewChat(missingChatId: string, attempts = 0) {
+        if (attempts > 5) {
+            console.error('Gave up waiting for chat to appear in database.');
+            return; 
+        }
+
+        console.log(`Polling for new chat... Attempt ${attempts + 1}`);
+
+        this.http.get<any[]>(this.API_URL, { headers: this.getHeaders() }).subscribe({
+            next: (chats) => {
+                const found = chats.find(c => c.id === missingChatId);
+                
+                if (found) {
+                    console.log('✅ Chat found! DB transaction is complete. Updating UI.');
+                    this.chats.set(chats);
+                } else {
+                    setTimeout(() => this.waitForNewChat(missingChatId, attempts + 1), 500);
+                }
+            },
+            error: (err) => console.error('Failed to poll chats', err)
+        });
+    }
 } 

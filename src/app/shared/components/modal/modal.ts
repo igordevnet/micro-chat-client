@@ -19,6 +19,8 @@ export class ModalComponent {
   private chatService = inject(ChatService);
   public auth = inject(AuthService);
 
+  hydratedBlockedFriendships = signal<any[]>([]);
+
   isOpen = signal(false);
   searchQuery = signal('');
   searchResults = signal<any[]>([]);
@@ -72,7 +74,7 @@ export class ModalComponent {
 
     effect(() => {
       const ids = this.friendshipService.friendIds();
-      
+
       if (ids.length > 0) {
         this.userService.getUsersByIds(ids).subscribe({
           next: (users) => this.friends.set(users),
@@ -80,6 +82,34 @@ export class ModalComponent {
         });
       } else {
         this.friends.set([]);
+      }
+    }, { allowSignalWrites: true });
+
+    effect(() => {
+      const blocked = this.friendshipService.blockedFriendships();
+      const myId = this.auth.currentUser()?.id;
+
+      if (blocked.length > 0 && myId) {
+        const idsToFetch = blocked.map(b => b.requesterId === myId ? b.receiverId : b.requesterId);
+        const uniqueIds = Array.from(new Set(idsToFetch));
+
+        this.userService.getUsersByIds(uniqueIds).subscribe({
+          next: (users: any[]) => {
+            const hydrated = blocked.map(b => {
+              const targetId = b.requesterId === myId ? b.receiverId : b.requesterId;
+              const targetUser = users.find(u => u.id === targetId);
+              return {
+                ...b,
+                targetUserId: targetId,
+                username: targetUser ? targetUser.username : `Usuário ${targetId}`
+              };
+            });
+            this.hydratedBlockedFriendships.set(hydrated);
+          },
+          error: (err) => console.error('Failed to hydrate blocked users', err)
+        });
+      } else {
+        this.hydratedBlockedFriendships.set([]);
       }
     }, { allowSignalWrites: true });
   }
@@ -161,6 +191,13 @@ export class ModalComponent {
     this.friendshipService.answerRequest(friendshipId, accepted).subscribe({
       next: () => console.log(`Friend request ${accepted ? 'accepted' : 'rejected'}`),
       error: (err) => console.error('Failed to answer friend request', err)
+    });
+  }
+
+  unblockUser(targetUserId: number) {
+    this.friendshipService.unblockUser(targetUserId).subscribe({
+      next: () => console.log(`Unblocked user ID: ${targetUserId}`),
+      error: (err) => console.error('Failed to unblock user', err)
     });
   }
 }

@@ -33,7 +33,7 @@ export class FriendshipService {
     answerRequest(friendshipId: string, isAccepted: boolean): Observable<void> {
         const payload = {
             friendshipId: friendshipId,
-            status: isAccepted ? 'ACCEPTED' : 'REJECTED' 
+            status: isAccepted ? 'ACCEPTED' : 'REJECTED'
         };
 
         return this.http.put<void>(
@@ -43,19 +43,32 @@ export class FriendshipService {
         ).pipe(
             tap(() => {
                 console.log(`Friend request ${isAccepted ? 'accepted' : 'rejected'}`);
-                this.loadFriendshipData(); 
+                this.loadFriendshipData();
             })
         );
     }
 
-    blockFriendship(friendshipId: string): Observable<void> {
+    blockUser(targetUserId: number): Observable<void> {
         return this.http.put<void>(
-            `${this.API_URL}/${friendshipId}/block`,
+            `${this.API_URL}/${targetUserId}/block`,
             {},
             { headers: this.getHeaders() }
         ).pipe(
             tap(() => {
-                console.log('Friendship blocked successfully');
+                console.log('User blocked successfully');
+                this.loadFriendshipData();
+            })
+        );
+    }
+
+    unblockUser(targetUserId: number): Observable<void> {
+        return this.http.put<void>(
+            `${this.API_URL}/${targetUserId}/unblock`, 
+            {}, 
+            { headers: this.getHeaders() }
+        ).pipe(
+            tap(() => {
+                console.log('User unblocked successfully');
                 this.loadFriendshipData();
             })
         );

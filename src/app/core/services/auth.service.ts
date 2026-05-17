@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
 import { UserSession } from '../../shared/interfaces/user.session';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +12,8 @@ export class AuthService {
   private readonly API_URL = environment.apiUrl + '/auth';
 
   private http = inject(HttpClient);
+
+  private router = inject(Router);
 
   private session = signal<UserSession | null>(this.getStoredSession());
 
@@ -72,8 +75,12 @@ export class AuthService {
     ).subscribe({
       next: () => {
         this.clearLocalSession();
+        this.router.navigate(['/login']);
       },
-      error: () => this.clearLocalSession()
+      error: () => {
+        this.clearLocalSession();
+        this.router.navigate(['/login']);
+      }
     });
   }
 

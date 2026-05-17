@@ -11,6 +11,10 @@
       <div class="header-actions">
         <button class="icon-btn" (click)="openNewChat()" title="Nova Conversa">
           <img src="assets/add-user.png" alt="New Chat" />
+
+          @if (friendshipService.pendingRequests().length > 0) {
+          <span class="badge"></span>
+          }
         </button>
 
         <div class="notification-wrapper">
@@ -84,9 +88,9 @@
     <div class="chat-list">
       @for (chat of filteredChats(); track chat.id) {
       <div class="chat-item" [class.active]="chatService.selectedChat()?.id === chat.id" (click)="selectChat(chat.id)">
-        
+
         <div class="chat-avatar">{{ getChatName(chat)[0] | uppercase }}</div>
-        
+
         <div class="chat-body">
           <div class="chat-row">
             <span class="name">{{ getChatName(chat) }}</span>
@@ -177,6 +181,7 @@
       }
     </div>
 
+    @if (!isChatBlocked()) {
     <footer class="input-area">
       <div class="input-wrapper">
 
@@ -211,6 +216,13 @@
         }
       </div>
     </footer>
+    } @else {
+    <footer class="input-area blocked-area">
+      <div class="blocked-message">
+        🚫 Você não pode enviar mensagens nesta conversa.
+      </div>
+    </footer>
+    }
 
     } @else {
     <div class="empty-dashboard">

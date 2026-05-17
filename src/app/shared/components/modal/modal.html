@@ -131,28 +131,32 @@
         }
       </section>
 
-      @if (friendshipService.blockedFriendships().length > 0) {
+      @if (hydratedBlockedFriendships().length > 0) {
       <div class="divider"></div>
       <section class="result-section blocked-section">
         <small class="section-title">USUÁRIOS BLOQUEADOS</small>
 
-        @for (block of friendshipService.blockedFriendships(); track block.id) {
+        @for (block of hydratedBlockedFriendships(); track block.id) {
         <div class="user-row blocked-row">
           <div class="avatar-circle">🚫</div>
 
           <div class="user-info">
-            <span class="username">
-              Usuário #{{ block.requesterId === auth.currentUser()?.id ? block.receiverId : block.requesterId }}
-            </span>
+            <span class="username">{{ block.username }}</span>
 
-            @if (block.blockedBy === auth.currentUser()?.id) {
+            @if (block.blockedBy == auth.currentUser()?.id) {
             <small class="bio error-text">Bloqueado por você</small>
             } @else {
             <small class="bio error-text">Você foi bloqueado</small>
             }
           </div>
 
+          @if (block.blockedBy == auth.currentUser()?.id) {
+          <button class="unblock-btn" (click)="unblockUser(block.targetUserId)">
+            Desbloquear
+          </button>
+          } @else {
           <button class="pending-btn" disabled>Bloqueado</button>
+          }
         </div>
         }
       </section>

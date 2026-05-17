@@ -54,9 +54,7 @@ export class WebSocketService {
                 if (!chatExists) {
                     console.log('New chat detected! Waiting for DB transaction to commit...');
 
-                    setTimeout(() => {
-                        this.chatService.loadChats();
-                    }, 500);
+                    this.chatService.waitForNewChat(notification.chatId);
                 }
             }
         });

@@ -122,6 +122,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ngOnInit() {
         this.wsService.connect();
         this.chatService.loadChats();
+        this.notificationService.loadNotifications(0, 10);
     }
 
     ngOnDestroy() {
@@ -289,6 +290,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (notification.chatId) {
             this.selectChat(notification.chatId);
         }
+        else if (notification.type === 'ACCEPTED' || notification.type === 'REQUEST') {
+            this.openNewChat();
+        }
 
         this.isDropdownOpen.set(false);
     }
@@ -388,29 +392,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         if (!targetUserId) return;
 
-        const allFriendships = [
-            ...this.friendshipService.pendingRequests(),
-        ];
-
-        const friendshipToBlock = allFriendships.find((f: any) =>
-            f.requesterId === targetUserId || f.receiverId === targetUserId
-        );
-
-        if (!friendshipToBlock) {
-            console.error('Could not find the friendship ID to block!');
-            return;
-        }
-
         const confirmBlock = confirm('Tem certeza que deseja bloquear este usuário? Vocês não poderão mais enviar mensagens.');
-
+        
         if (confirmBlock) {
-            this.friendshipService.blockFriendship(friendshipToBlock.id).subscribe({
+            this.friendshipService.blockUser(targetUserId).subscribe({
                 next: () => {
                     alert('Usuário bloqueado com sucesso.');
-                    this.closeChat();
+                    this.closeChat(); 
                 },
                 error: (err) => console.error('Failed to block user', err)
             });
         }
     }
+
+    isChatBlocked = computed(() => {
+        const chat = this.chatService.selectedChat();
+        const targetId = this.getFriendId(chat);
+        
+        if (!targetId) return false;
+
+        return this.friendshipService.blockedFriendships().some(b => 
+            b.requesterId === targetId || b.receiverId === targetId
+        );
+    });
+
 }
