@@ -1,0 +1,213 @@
+@if (isOpen()) {
+<div class="modal-backdrop" (click)="close()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+
+    <header class="modal-header">
+      <div class="header-top">
+        <button class="close-btn" (click)="close()">✕</button>
+
+        <h3>{{ isGroupMode() ? 'Novo Grupo' : 'Nova conversa' }}</h3>
+
+        <button class="group-toggle-btn" (click)="toggleGroupMode()">
+          {{ isGroupMode() ? 'Cancelar' : 'Criar Grupo 👥' }}
+        </button>
+      </div>
+
+      @if (!isGroupMode()) {
+      <div class="search-bar">
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Digite @username para buscar..." autoFocus />
+      </div>
+      } @else {
+      <div class="search-bar group-name-input">
+        <input type="text" [(ngModel)]="groupName" placeholder="Nome do Grupo..." autoFocus />
+      </div>
+      }
+    </header>
+
+    <div class="modal-content">
+      @if (!isGroupMode()) {
+      @if (searchQuery().trim().length >= 3) {
+      <section class="result-section">
+        <small class="section-title">USUÁRIOS ENCONTRADOS</small>
+
+        @for (user of searchResults(); track user.id) {
+        <div class="user-row">
+          <div class="avatar-circle">
+            {{ user.username[0] | uppercase }}
+          </div>
+
+          <div class="user-info">
+            <span class="username">{{ user.username }}</span>
+            <small class="bio">Disponível para chat</small>
+          </div>
+
+          <div class="user-actions">
+            @switch (getFriendshipStatus(user.id)) {
+
+            @case ('FRIEND') {
+            <button class="chat-btn" (click)="startChat(user.id, user.username)">
+              Conversar
+            </button>
+            }
+
+            @case ('SENT_REQUEST') {
+            <button class="pending-btn" disabled>
+              Pendente
+            </button>
+            }
+
+            @case ('RECEIVED_REQUEST') {
+            <button class="add-btn" style="background: #10b981; color: white; border-color: #10b981;"
+              (click)="answerFriendship(getPendingRequestId(user.id), true)">
+              Aceitar ✓
+            </button>
+            }
+
+            @case ('BLOCKED') {
+            <button class="pending-btn" style="color: #ef4444;" disabled>
+              Bloqueado
+            </button>
+            }
+
+            @case ('NONE') {
+            <button class="add-btn" (click)="sendFriendRequest(user.id)">
+              Adicionar
+            </button>
+            }
+
+            @default {
+            <button class="add-btn" (click)="sendFriendRequest(user.id)">
+              Adicionar
+            </button>
+            }
+            }
+          </div>
+        </div>
+        } @empty {
+        <div class="empty-state">Nenhum usuário encontrado.</div>
+        }
+      </section>
+      }
+
+      @else {
+
+      @if (hydratedPendingRequests().length > 0) {
+      <section class="result-section pending-section">
+        <small class="section-title" style="color: #06b6d4;">PEDIDOS PENDENTES</small>
+
+        @for (req of hydratedPendingRequests(); track req.id) {
+
+        @if (req.receiverId === auth.currentUser()?.id) {
+        <div class="user-row">
+          <div class="avatar-circle" style="border: 2px solid #06b6d4;">
+            {{ (req.username ? req.username[0] : 'U') | uppercase }}
+          </div>
+
+          <div class="user-info">
+            <span class="username">{{ req.username }}</span>
+            <small class="bio" style="color: #06b6d4;">Quer adicionar você</small>
+          </div>
+
+          <div class="request-actions">
+            <button class="reject-req-btn" (click)="answerFriendship(req.id, false)" title="Recusar">✕</button>
+            <button class="accept-req-btn" (click)="answerFriendship(req.id, true)" title="Aceitar">✓</button>
+          </div>
+        </div>
+        }
+
+        }
+      </section>
+      <div class="divider"></div>
+      }
+
+      <section class="result-section">
+        <small class="section-title">SEUS AMIGOS</small>
+
+        @for (friend of friends(); track friend.id) {
+        <div class="user-row clickable" (click)="startChat(friend.id, friend.username)">
+          <div class="avatar-circle">
+            {{ (friend.username ? friend.username[0] : 'U') | uppercase }}
+          </div>
+
+          <div class="user-info">
+            <span class="username">{{ friend.username }}</span>
+            <small class="bio">Disponível para chat</small>
+          </div>
+
+          <button class="chat-btn" (click)="startChat(friend.id, friend.username); $event.stopPropagation()">
+            Conversar
+          </button>
+        </div>
+        } @empty {
+        <div class="empty-state">Você ainda não tem amigos adicionados.</div>
+        }
+      </section>
+
+      @if (hydratedBlockedFriendships().length > 0) {
+      <div class="divider"></div>
+      <section class="result-section blocked-section">
+        <small class="section-title">USUÁRIOS BLOQUEADOS</small>
+
+        @for (block of hydratedBlockedFriendships(); track block.id) {
+        <div class="user-row blocked-row">
+          <div class="avatar-circle">🚫</div>
+
+          <div class="user-info">
+            <span class="username">{{ block.username }}</span>
+
+            @if (block.blockedBy == auth.currentUser()?.id) {
+            <small class="bio error-text">Bloqueado por você</small>
+            } @else {
+            <small class="bio error-text">Você foi bloqueado</small>
+            }
+          </div>
+
+          @if (block.blockedBy == auth.currentUser()?.id) {
+          <button class="unblock-btn" (click)="unblockUser(block.targetUserId)">
+            Desbloquear
+          </button>
+          } @else {
+          <button class="pending-btn" disabled>Bloqueado</button>
+          }
+        </div>
+        }
+      </section>
+      }
+      }
+      }
+      @else {
+      <section class="result-section">
+        <small class="section-title">SELECIONE OS PARTICIPANTES</small>
+
+        @for (friend of friends(); track friend.id) {
+        <div class="user-row clickable" [class.selected-row]="selectedGroupMembers().has(friend.id)"
+          (click)="toggleMemberSelection(friend.id)">
+
+          <div class="avatar-circle">
+            {{ (friend.username ? friend.username[0] : 'U') | uppercase }}
+          </div>
+
+          <div class="user-info">
+            <span class="username">{{ friend.username }}</span>
+          </div>
+
+          <div class="checkbox-circle" [class.checked]="selectedGroupMembers().has(friend.id)">
+            {{ selectedGroupMembers().has(friend.id) ? '✓' : '' }}
+          </div>
+        </div>
+        } @empty {
+        <div class="empty-state">Você precisa de amigos para criar um grupo.</div>
+        }
+      </section>
+
+      <div class="modal-footer">
+        <button class="submit-group-btn" [disabled]="selectedGroupMembers().size === 0 || !groupName().trim()"
+          (click)="submitGroup()">
+          Confirmar Grupo ({{ selectedGroupMembers().size }})
+        </button>
+      </div>
+      }
+    </div>
+  </div>
+</div>
+}

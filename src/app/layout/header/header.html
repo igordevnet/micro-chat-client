@@ -1,0 +1,20 @@
+<nav class="header-nav" [class.scrolled]="isScrolled">
+  <div class="container">
+    <a routerLink="/" class="logo">
+      <div class="logo-icon">M</div>
+      <span>Micro-Chat</span>
+    </a>
+
+    <div class="nav-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Home</a>
+      <a href="#features">Features</a>
+      <a href="http://localhost:8080/swagger-ui.html" target="_blank">Docs API (Localhost-only)</a>
+    </div>
+
+    <div class="auth-buttons">
+      <a routerLink="/login" class="btn-login">Entrar</a>
+      <a routerLink="/register" class="btn-signup">Criar Conta</a>
+    </div>
+  </div>
+
+</nav>
